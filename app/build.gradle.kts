@@ -85,6 +85,7 @@ dependencies {
 
     // Other dependencies like lifecycle, viewmodel, etc.
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation(libs.androidx.recyclerview)
 
     // Testing dependencies
     testImplementation(libs.junit)

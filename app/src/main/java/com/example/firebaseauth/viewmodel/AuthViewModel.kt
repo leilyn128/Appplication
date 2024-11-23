@@ -77,28 +77,44 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
 
     // Updated login function
-        fun login(email: String, password: String) {
-            _authState.value = AuthState.Loading // Indicate loading state
+    fun login(email: String, password: String) {
+        _authState.value = AuthState.Loading // Indicate loading state
 
-            auth.signInWithEmailAndPassword(email, password) // Use signIn for login
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val user = auth.currentUser
-                        if (user != null) {
-                            _authState.value =
-                                AuthState.Authenticated(user) // Update to authenticated state
-                        } else {
-                            _authState.value = AuthState.Unauthenticated // Handle null user case
-                        }
+        auth.signInWithEmailAndPassword(email, password) // Use signIn for login
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    if (user != null) {
+                        // Fetch the user role from Firestore after successful login
+                        db.collection("users")
+                            .document(user.uid)
+                            .get()
+                            .addOnSuccessListener { document ->
+                                if (document != null && document.exists()) {
+                                    val role = document.getString("role") ?: "employee" // Default to "employee"
+                                    _authState.value = AuthState.Authenticated(user)
+                                    // Optionally, store the role in user details or elsewhere
+                                    // For example, you can use a MutableLiveData to store the role:
+                                    // _userRole.value = role
+                                } else {
+                                    _authState.value = AuthState.Unauthenticated
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                _authState.value = AuthState.Error("Failed to get user role: ${exception.message}")
+                            }
                     } else {
-                        _authState.value =
-                            AuthState.Error("Authentication failed: ${task.exception?.message}")
+                        _authState.value = AuthState.Unauthenticated
                     }
+                } else {
+                    _authState.value = AuthState.Error("Authentication failed: ${task.exception?.message}")
                 }
-        }
+            }
+    }
 
 
-        // Register a new account (sign-up)
+
+    // Register a new account (sign-up)
         // Register a new account (sign-up)
         fun signup(
             email: String,
@@ -124,8 +140,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                 "username" to UserModel.value.username,
                                 "address" to UserModel.value.address,
                                 "contactNumber" to UserModel.value.contactNo,
-                                "email" to UserModel.value.email
+                                "email" to UserModel.value.email,
+                                "role" to if (email == "admin@example.com") "admin" else "employee" // Assign role based on email
                             )
+
                             // Save user data to Firestore
                             db.collection("users")
                                 .document(userId)
@@ -152,7 +170,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
 
 
-        // Save user data to Firestore
+    // Save user data to Firestore
         private fun saveUserToFirestore(
             user: FirebaseUser,
             userModel: UserModel,

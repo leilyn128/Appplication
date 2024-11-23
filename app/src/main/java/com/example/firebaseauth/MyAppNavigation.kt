@@ -31,8 +31,6 @@ fun MyAppNavigation(
     modifier: Modifier = Modifier,
     authViewModel: AuthViewModel,
     currentLocation: LatLng? = null
-
-
 ) {
     val navController = rememberNavController()
 
@@ -41,8 +39,7 @@ fun MyAppNavigation(
     val context = LocalContext.current
 
     val authState by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
-    //val authState = authViewModel.authState.observeAsState(AuthState.Unauthenticated).value
-
+    val userRole by remember { mutableStateOf("employee") } // Default to employee (you'll fetch this dynamically)
 
     // Create a LocationHelper instance
     val locationHelper = remember {
@@ -52,23 +49,33 @@ fun MyAppNavigation(
         )
     }
 
+    // Fetch user role from Firestore or some authentication service
+    LaunchedEffect(Unit) {
+        // Ideally, you'd fetch the role from Firestore or an authenticated user profile
+        // Example: userRole = firestoreHelper.getUserRole(userId)
+    }
+
+    // Determine the starting destination based on authentication and role
+    val startDestination = if (authState is AuthState.Authenticated) {
+        if (userRole == "admin") Screen.Home.route else Screen.Map.route
+    } else {
+        Screen.Login.route
+    }
 
     NavHost(
         navController = navController,
-        startDestination = if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
+        startDestination = startDestination
     ) {
-        // Define your composable screens here
-
-
-    // Login Page
+        // Login Page
         composable(Screen.Login.route) {
             LoginPage(
                 modifier = modifier,
                 navController = navController,
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    // Navigate to Home on successful login
-                    navController.navigate(Screen.Home.route) {
+                    // After login, fetch the user role and navigate accordingly
+                    // Set the userRole variable dynamically here (e.g., from Firestore)
+                    navController.navigate(if (userRole == "admin") Screen.Home.route else Screen.Map.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 }
@@ -82,16 +89,15 @@ fun MyAppNavigation(
                 navController = navController,
                 authViewModel = authViewModel,
                 onSignUpSuccess = {
-                    // Navigate to Home on successful login
+                    // Navigate to Home on successful signup
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Signup.route) { inclusive = true }
                     }
-
                 }
             )
         }
 
-        // Home Page (includes bottom navigation)
+        // Home Page (Admin or Employee view)
         composable(Screen.Home.route) {
             HomePage(
                 modifier = modifier,
@@ -100,13 +106,10 @@ fun MyAppNavigation(
             )
         }
 
-        // Map Page
+        // Map Page (Employee view or any specific geofencing functionality)
         composable(Screen.Map.route) {
             MapPage(
-                modifier = modifier,
-
-
-
+                modifier = modifier
             )
         }
     }

@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.firebaseauth"> <!-- Corrected position of the package name -->
+    package="com.example.firebaseauth">
 
-    <!-- Permissions outside the application block -->
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
-
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <application
         android:allowBackup="true"
@@ -24,10 +23,18 @@
         android:theme="@style/Theme.FirebaseAuth"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="31">
+
+        <!-- Geofence Service -->
+        <service android:name=".GeofenceBroadcastReceiver" android:exported="false" />
+
         <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBe_14t6IBBu6Sv3K7ZLnEtRAIyW_CcORk" />
+
+        <meta-data
+            android:name="com.google.android.gms.location.GeofencingApi"
+            android:value="enabled" />
 
         <activity
             android:name=".MainActivity"
