@@ -19,7 +19,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.ui.theme.NavItem
-import com.example.googlemappage.GeofencingPage
 //import com.example.firebaseauth.viewmodel.DTRViewModel
 import com.example.googlemappage.MapPage
 import com.google.android.gms.maps.model.LatLng
@@ -43,9 +42,7 @@ fun HomePage(
         currentLocation = LatLng(37.7749, -122.4194) // Example location: San Francisco
     }
 
-    // Fetch user role dynamically after login (simulated here, replace with actual Firestore logic)
-    var userRole by remember { mutableStateOf("employee") } // Default to employee, you should fetch this dynamically
-
+    // Handle unauthenticated state
     LaunchedEffect(authState) {
         if (authState is AuthState.Unauthenticated) {
             Log.d("HomePage", "User is unauthenticated, navigating to login.")
@@ -53,31 +50,15 @@ fun HomePage(
                 popUpTo("home") { inclusive = true }
                 launchSingleTop = true
             }
-        } else {
-            // Ideally, fetch role from Firestore or auth service
-            // userRole = firestoreHelper.getUserRole(authState.userId)
         }
     }
 
-    // Check if the user is an admin or employee
-    val isAdmin = userRole == "admin"
-
-    // Navigation items for the bottom bar, show different options based on role
-    val navItemList = if (isAdmin) {
-        // Admin can see more options like Geofencing, etc.
-        listOf(
-            NavItem("Map", Icons.Default.LocationOn),
-            NavItem("Geofencing", Icons.Default.DateRange), // Example admin-only feature
-            NavItem("Account", Icons.Default.AccountCircle)
-        )
-    } else {
-        // Employee only sees DTR and Account
-        listOf(
-            NavItem("Map", Icons.Default.LocationOn),
-            NavItem("DTR", Icons.Default.DateRange),
-            NavItem("Account", Icons.Default.AccountCircle)
-        )
-    }
+    // Navigation items for the bottom bar
+    val navItemList = listOf(
+        NavItem("Map", Icons.Default.LocationOn),
+        NavItem("DTR", Icons.Default.DateRange),
+        NavItem("Account", Icons.Default.AccountCircle)
+    )
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -108,11 +89,13 @@ fun HomePage(
             authViewModel = authViewModel,
             navController = navController,
             currentLocation = currentLocation,
-            dtrViewModel = dtrViewModel,
-            isAdmin = isAdmin // Pass the isAdmin boolean here
+            dtrViewModel = dtrViewModel
+
+
         )
     }
 }
+
 @Composable
 fun ContentScreen(
     modifier: Modifier = Modifier,
@@ -122,16 +105,15 @@ fun ContentScreen(
     authViewModel: AuthViewModel,
     navController: NavController,
     currentLocation: LatLng?,
-    dtrViewModel: DTRViewModel,
-    isAdmin: Boolean // Add isAdmin parameter
+    dtrViewModel: DTRViewModel // Pass DTRViewModel as a parameter
 ) {
     when (selectedIndex) {
         0 -> {
-            // Display the map page for both Admin and Employee
+            // Display the map page
             MapPage(modifier = modifier)
         }
         1 -> {
-            // Display DTR page for both Admin and Employee
+            // Display the DTR page
             DTR(
                 onNavigateToCamera = {
                     // Navigate to the camera with a callback to handle back navigation
@@ -149,7 +131,7 @@ fun ContentScreen(
             )
         }
         2 -> {
-            // Display the account page for both Admin and Employee
+            // Display the account page
             Account(
                 modifier = modifier,
                 authViewModel = authViewModel,
@@ -160,12 +142,6 @@ fun ContentScreen(
             // Display the camera page and pass the onBack lambda for navigation
             CameraPage(onBack = onBack)
         }
-        // Admin-only screens
-        4 -> {
-            if (isAdmin) {
-                // Display Geofencing Page for Admin
-                GeofencingPage(modifier = modifier)
-            }
-        }
     }
 }
+
