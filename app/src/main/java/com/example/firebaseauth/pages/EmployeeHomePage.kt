@@ -5,7 +5,6 @@ import CameraPage
 import DTRViewModel
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -15,10 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.ui.theme.NavItem
 //import com.example.firebaseauth.viewmodel.DTRViewModel
@@ -30,6 +27,7 @@ import com.google.android.gms.maps.model.LatLng
 fun HomePage(
     modifier: Modifier = Modifier,
     navController: NavController,
+    role: String,
     authViewModel: AuthViewModel = viewModel()
 ) {
     val authState by authViewModel.authState.observeAsState()

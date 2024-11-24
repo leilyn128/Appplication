@@ -19,6 +19,8 @@ import com.example.firebaseauth.viewmodel.AuthState
 import com.example.googlemappage.MapPage
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.*
+import com.example.firebaseauth.pages.AdminHomePage
+
 
 import com.example.firebaseauth.pages.DTR
 
@@ -35,94 +37,96 @@ fun MyAppNavigation(
     modifier: Modifier = Modifier,
     authViewModel: AuthViewModel,
     currentLocation: LatLng? = null
-
-
 ) {
     val navController = rememberNavController()
 
-    val isAuthenticated = authViewModel.isAuthenticated
+    // Observe the auth state
+    val authState by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
+    val userRole by authViewModel.userRole.observeAsState()
 
     val context = LocalContext.current
-
-    val authState by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
-    //val authState = authViewModel.authState.observeAsState(AuthState.Unauthenticated).value
-
 
     // Create a LocationHelper instance
     val locationHelper = remember {
         LocationHelper(
             context = context,
-            onLocationUpdate = {} // We will pass the update logic to the MapPage
+            onLocationUpdate = {} // Pass the location update logic to the MapPage
         )
     }
 
+    // Determine the start destination based on the authentication state and role
+    val startDestination = when (authState) {
+        is AuthState.EmployeeAuthenticated -> Screen.Home.route
+        is AuthState.AdminAuthenticated -> "adminHome" // Admin's custom home route
+        else -> Screen.Login.route
+    }
 
     NavHost(
         navController = navController,
-        startDestination = if (authState is AuthState.Authenticated) Screen.Home.route else Screen.Login.route
+        startDestination = startDestination
     ) {
-        // Define your composable screens here
-
+        // Define the screens
 
         // Login Page
-        composable(Screen.Login.route) {
+        composable("login") {
             LoginPage(
                 modifier = modifier,
                 navController = navController,
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    // Navigate to Home on successful login
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
+                    // Check the role here and navigate accordingly
+                    val userEmail = authViewModel.auth.currentUser?.email ?: ""
+                    val role = authViewModel.assignRoleBasedOnEmail(userEmail)
+
+                    when (role) {
+                        "admin" -> navController.navigate("adminHome") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                        "employee" -> navController.navigate("employeeHome") {
+                            popUpTo("login") { inclusive = true }
+                        }
                     }
                 }
             )
         }
 
-        // Signup Page
-        composable(Screen.Signup.route) {
-            SignupPage(
+        // Admin Home Page
+        composable("adminHome") {
+            AdminHomePage(
                 modifier = modifier,
                 navController = navController,
                 authViewModel = authViewModel,
-                onSignUpSuccess = {
-                    // Navigate to Home on successful login
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Signup.route) { inclusive = true }
-                    }
-
-                }
+                role = "admin" // Pass role directly to HomePage
             )
         }
 
-        // Home Page (includes bottom navigation)
-        composable(Screen.Home.route) {
+        // Employee Home Page
+        composable("employeeHome") {
             HomePage(
                 modifier = modifier,
                 navController = navController,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                role = "employee" // Pass role directly to HomePage
             )
         }
 
         // Map Page
         composable(Screen.Map.route) {
-            MapPage(
-                modifier = modifier,
-            )
+            MapPage(modifier = modifier)
         }
+
+        // Camera Page
         composable("camera_page") {
             CameraPage(
                 onImageCaptured = { bitmap ->
-                    // Handle the captured image here
+                    // Handle the captured image
                     Log.d("CameraPage", "Image captured successfully.")
                 },
                 onBack = {
-                    navController.popBackStack() // Navigate back to the previous screen
+                    navController.popBackStack() // Navigate back
                     Log.d("BackPressed", "Navigated back from CameraPage.")
                 }
             )
         }
-
     }
 }
-

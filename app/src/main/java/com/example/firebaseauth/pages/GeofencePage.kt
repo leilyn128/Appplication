@@ -15,23 +15,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavController
 import com.example.firebaseauth.R
 import com.example.firebaseauth.activity.GeofenceHelper
 import com.example.firebaseauth.activity.GoogleMapView
-import com.example.firebaseauth.model.GeofenceData
 
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.Circle
-import com.google.android.gms.maps.model.CircleOptions
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 
 @Composable
 fun GeofencePage(
     geofenceHelper: GeofenceHelper,
-    onGeofenceAdded: (Boolean) -> Unit
+    onGeofenceAdded: (Boolean) -> Unit,
+    navController: NavController,
+    modifier: Modifier = Modifier
 ) {
     var lat by remember { mutableStateOf("") }
     var lon by remember { mutableStateOf("") }

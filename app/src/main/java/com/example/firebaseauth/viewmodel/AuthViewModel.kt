@@ -10,17 +10,17 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.runtime.State
+import androidx.navigation.NavController
+
 //import com.example.firebaseauth.login.AccountType
 //import com.google.android.gms.common.internal.AccountType
 
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-    private val _userRole = MutableLiveData<String>("employee")  // Default to 'employee'
-    val userRole: LiveData<String> get() = _userRole
 
     private val _authState = MutableLiveData<AuthState>(AuthState.Unauthenticated)
     val authState: LiveData<AuthState> get() = _authState
@@ -32,6 +32,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val userModel: State<UserModel> = _userModel
 
     val user = FirebaseAuth.getInstance().currentUser
+    private val _userRole = MutableLiveData<String>()
+    val userRole: LiveData<String> get() = _userRole
 
 
     val authStatus: MutableLiveData<AuthState.AuthResult> = MutableLiveData()
@@ -78,39 +80,73 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    // Updated login function
-    fun login(email: String, password: String) {
-        _authState.value = AuthState.Loading // Indicate loading state
-
-        auth.signInWithEmailAndPassword(email, password) // Use signIn for login
+    fun login(email: String, password: String, navController: NavController) {
+        auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val user = auth.currentUser
-                    if (user != null) {
-                        // Fetch the user role from Firestore after successful login
-                        db.collection("users")
-                            .document(user.uid)
-                            .get()
-                            .addOnSuccessListener { document ->
-                                if (document != null && document.exists()) {
-                                    val role = document.getString("role") ?: "employee" // Default to "employee"
-                                    _authState.value = AuthState.Authenticated(user)
-                                    // Optionally, store the role in user details or elsewhere
-                                } else {
-                                    _authState.value = AuthState.Unauthenticated
-                                }
+                    // Get the email of the current logged-in user
+                    val userEmail = auth.currentUser?.email ?: ""
+                    val role = assignRoleBasedOnEmail(userEmail) // Assign the role based on the email
+
+                    Log.d("Login", "User logged in as $role")
+
+                    // Navigate to the appropriate screen based on the role
+                    when (role) {
+                        "admin" -> {
+                            navController.navigate("adminHome") { // Navigate to Admin Home
+                                popUpTo("login") { inclusive = true } // Pop the Login screen from stack
                             }
-                            .addOnFailureListener { exception ->
-                                _authState.value = AuthState.Error("Failed to get user role: ${exception.message}")
+                        }
+                        "employee" -> {
+                            navController.navigate("employeeHome") { // Navigate to Employee Home
+                                popUpTo("login") { inclusive = true } // Pop the Login screen from stack
                             }
-                    } else {
-                        _authState.value = AuthState.Unauthenticated
+                        }
+                        else -> {
+                            Log.e("Login", "Unknown role: $role")
+                        }
                     }
                 } else {
-                    _authState.value = AuthState.Error("Authentication failed: ${task.exception?.message}")
+                    Log.e("Login", "Login failed: ${task.exception?.message}")
                 }
             }
     }
+
+
+    fun registerUser(email: String, password: String) {
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val userId = auth.currentUser?.uid
+                    val role = assignRoleBasedOnEmail(email)
+                    val user = hashMapOf(
+                        "email" to email,
+                        "role" to role
+                    )
+                    if (userId != null) {
+                        db.collection("users").document(userId).set(user)
+                            .addOnSuccessListener {
+                                Log.d("Register", "User role assigned as $role")
+                            }
+                            .addOnFailureListener { exception ->
+                                Log.e("Register", "Error saving user data: ${exception.message}")
+                            }
+                    }
+                } else {
+                    Log.e("Register", "Registration failed: ${task.exception?.message}")
+                }
+            }
+    }
+
+
+     fun assignRoleBasedOnEmail(email: String?): String {
+        return if (email == "admin10@example.com") { // Replace with the actual admin email
+            "admin"
+        } else {
+            "employee"
+        }
+    }
+
 
 
     // Register a new account (sign-up)
