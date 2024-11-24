@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.firebaseauth"> <!-- Corrected position of the package name -->
+    package="com.example.firebaseauth">
 
     <!-- Permissions outside the application block -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
+
 
     <application
         android:allowBackup="true"
@@ -24,6 +29,17 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="31">
 
+        <!-- FileProvider Configuration -->
+        ...>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.firebaseauth.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
         <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -38,6 +54,7 @@
             android:name=".activity.GeofenceBroadcastReceiver"
             android:exported="false" />
 
+
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
@@ -49,6 +66,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+       <provider
+           android:authorities="com.example.firebaseauth.fileProvider"
+           android:name="androidx.core.content.FileProvider"
+           android:exported="false"
+           android:grantUriPermissions="true">
+
+           <meta-data
+               android:name="android.support.FILE_PROVIDER_PATHS"
+               android:resource="@xml/file_paths"
+               />
+
+       </provider>
+
 
     </application>
 

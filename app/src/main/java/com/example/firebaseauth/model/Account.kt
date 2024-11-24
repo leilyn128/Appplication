@@ -7,6 +7,7 @@ data class UserModel(
     val employeeID: String = "",
     val address: String = "",
     val contactNo: String = "",
+    val role: String = " "
 
 )
 

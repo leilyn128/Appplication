@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,12 +58,12 @@ fun DTRCustomHeader(onNavigateToCamera: () -> Unit) {
         )
 
         // Camera Icon Button
-        IconButton(onClick = onNavigateToCamera) {
-            Icon(
-                imageVector = Icons.Default.CameraAlt,
-                contentDescription = "Capture Photo",
-                tint = Color.White // Set the icon color to white
-            )
+        Column {
+            // Camera icon button
+            IconButton(onClick = onNavigateToCamera) {
+                Icon(imageVector = Icons.Default.Camera, contentDescription = "Open Camera")
+            }
+
         }
     }
 }

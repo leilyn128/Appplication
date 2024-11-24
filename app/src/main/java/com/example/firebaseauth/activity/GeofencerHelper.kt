@@ -1,6 +1,5 @@
 package com.example.firebaseauth.activity
 
-
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
@@ -11,8 +10,15 @@ import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 import android.content.pm.PackageManager
+import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.Circle
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
+import java.lang.reflect.Modifier
 
 class GeofenceHelper(private val context: Context) {
     private val geofencingClient: GeofencingClient = LocationServices.getGeofencingClient(context)
@@ -21,14 +27,14 @@ class GeofenceHelper(private val context: Context) {
         // Check for permissions before adding a geofence
         if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             val geofence = Geofence.Builder()
-                .setRequestId("geofence_id_${lat}_${lon}") // Unique ID based on lat, lon
+                .setRequestId("geofence_id_${System.currentTimeMillis()}") // Unique ID based on timestamp
                 .setCircularRegion(lat, lon, radius)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
+                .setExpirationDuration(Geofence.NEVER_EXPIRE) // Never expire
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT) // Detect both enter and exit
                 .build()
 
             val geofencingRequest = GeofencingRequest.Builder()
-                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER) // Trigger when entering
                 .addGeofence(geofence)
                 .build()
 
@@ -40,7 +46,6 @@ class GeofenceHelper(private val context: Context) {
                     Log.d("GeofenceHelper", "Failed to add geofence: ${it.message}")
                 }
         } else {
-            // Request permission if not granted
             ActivityCompat.requestPermissions(
                 context as Activity,
                 arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
@@ -52,16 +57,6 @@ class GeofenceHelper(private val context: Context) {
     private fun getGeofencePendingIntent(): PendingIntent {
         val intent = Intent(context, GeofenceBroadcastReceiver::class.java)
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
-    }
-
-    fun removeGeofence(geofenceId: String) {
-        geofencingClient.removeGeofences(listOf(geofenceId))
-            .addOnSuccessListener {
-                Log.d("GeofenceHelper", "Geofence removed successfully")
-            }
-            .addOnFailureListener {
-                Log.d("GeofenceHelper", "Failed to remove geofence: ${it.message}")
-            }
     }
 
     companion object {

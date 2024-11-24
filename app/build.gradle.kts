@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.storage.CacheResetOnProcessCanceled.enabled
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,11 +17,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Ensure to include the location hardware feature
-        manifestPlaceholders["usesCleartextTraffic"] = true
     }
 
     buildTypes {
@@ -32,6 +30,12 @@ android {
         }
     }
 
+    // Enable View Binding here
+    buildFeatures {
+        compose = true
+        viewBinding = true // Correct syntax to enable view binding
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -41,14 +45,11 @@ android {
         jvmTarget = "17"
     }
 
-    buildFeatures {
-        compose = true
-    }
-
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.0" // Ensure compatibility with Compose UI
     }
 }
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -102,6 +103,12 @@ dependencies {
 
     implementation ("androidx.compose.runtime:runtime-livedata:1.6.0")
     implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.8.2")
+
+    implementation ("io.coil-kt:coil-compose:2.4.0")
+    implementation("com.google.firebase:firebase-storage:20.2.0")
+    implementation ("com.google.mlkit:face-detection:16.1.3")
+
+
 
 
 }

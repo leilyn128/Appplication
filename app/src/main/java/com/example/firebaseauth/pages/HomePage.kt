@@ -1,6 +1,7 @@
 package com.example.firebaseauth.pages
 
 import AuthViewModel
+import CameraPage
 import DTRViewModel
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.ui.theme.NavItem
 //import com.example.firebaseauth.viewmodel.DTRViewModel
@@ -33,19 +35,20 @@ fun HomePage(
     val authState by authViewModel.authState.observeAsState()
     val dtrViewModel: DTRViewModel = viewModel()
 
+    // Retrieve user role from authViewModel
+    val userRole = authViewModel.userDetails.value?.role?: "employee"
+
     var selectedIndex by remember { mutableStateOf(0) }
     var timeInput by remember { mutableStateOf("") }
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
 
-    // Simulating fetching the current location (replace with actual location logic)
+    // Simulate fetching the current location
     LaunchedEffect(Unit) {
-        currentLocation = LatLng(37.7749, -122.4194) // Example location: San Francisco
+        currentLocation = LatLng(37.7749, -122.4194) // Example location
     }
 
-    // Handle unauthenticated state
     LaunchedEffect(authState) {
         if (authState is AuthState.Unauthenticated) {
-            Log.d("HomePage", "User is unauthenticated, navigating to login.")
             navController.navigate("login") {
                 popUpTo("home") { inclusive = true }
                 launchSingleTop = true
@@ -53,7 +56,6 @@ fun HomePage(
         }
     }
 
-    // Navigation items for the bottom bar
     val navItemList = listOf(
         NavItem("Map", Icons.Default.LocationOn),
         NavItem("DTR", Icons.Default.DateRange),
@@ -80,56 +82,57 @@ fun HomePage(
             selectedIndex = selectedIndex,
             onNavigateToCamera = { onBack ->
                 selectedIndex = 3 // Navigate to CameraPage
-                onBack(timeInput) // Pass time input back when done
+                onBack(timeInput)
             },
             onBack = { time ->
-                timeInput = time // Capture returned time from CameraPage
+                timeInput = time
                 selectedIndex = 1 // Navigate back to DTR
             },
+            userRole = userRole, // Pass user role to ContentScreen
             authViewModel = authViewModel,
             navController = navController,
             currentLocation = currentLocation,
             dtrViewModel = dtrViewModel
-
-
         )
     }
 }
-
 @Composable
 fun ContentScreen(
     modifier: Modifier = Modifier,
     selectedIndex: Int,
-    onNavigateToCamera: (onBack: (String) -> Unit) -> Unit, // Function that accepts onBack
-    onBack: (String) -> Unit, // Function to handle back navigation from CameraPage
+    onNavigateToCamera: (onBack: (String) -> Unit) -> Unit,
+    onBack: (String) -> Unit,
     authViewModel: AuthViewModel,
     navController: NavController,
     currentLocation: LatLng?,
-    dtrViewModel: DTRViewModel // Pass DTRViewModel as a parameter
+    dtrViewModel: DTRViewModel,
+    userRole: String // Add userRole parameter
 ) {
     when (selectedIndex) {
         0 -> {
             // Display the map page
             MapPage(modifier = modifier)
         }
+
         1 -> {
             // Display the DTR page
             DTR(
                 onNavigateToCamera = {
-                    // Navigate to the camera with a callback to handle back navigation
-                    onNavigateToCamera { result ->
-                        // Handle the result from the camera if needed
-                        println("Photo result: $result")
+                    // Only show CameraPage for employees, not admins
+                    if (userRole != "admin") {
+                        onNavigateToCamera { result ->
+                            println("Photo result: $result")
+                        }
                     }
                 },
                 dtrViewModel = dtrViewModel,
                 getCurrentMonth = {
-                    // Provide the current month as a string
                     java.time.Month.of(java.time.LocalDate.now().monthValue).name.lowercase()
                         .replaceFirstChar { it.uppercase() }
                 }
             )
         }
+
         2 -> {
             // Display the account page
             Account(
@@ -138,10 +141,23 @@ fun ContentScreen(
                 navController = navController
             )
         }
+
         3 -> {
-            // Display the camera page and pass the onBack lambda for navigation
-            CameraPage(onBack = onBack)
+            if (userRole != "admin") {
+                // If employee, show CameraPage
+                CameraPage(
+                    onImageCaptured = { bitmap ->
+                        Log.d("CameraPage", "Image captured successfully.")
+                    },
+                    onBack = {
+                        navController.popBackStack()
+                        Log.d("BackPressed", "Navigated back from CameraPage.")
+                    }
+                )
+            } else {
+                // Admin: Navigate back to DTR instead of showing CameraPage
+                navController.popBackStack()
+            }
         }
     }
 }
-

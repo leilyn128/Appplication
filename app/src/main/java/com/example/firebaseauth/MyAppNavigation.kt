@@ -1,6 +1,8 @@
 package com.example.firebaseauth
 
 import AuthViewModel
+import CameraPage
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
@@ -17,6 +19,8 @@ import com.example.firebaseauth.viewmodel.AuthState
 import com.example.googlemappage.MapPage
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.*
+
+import com.example.firebaseauth.pages.DTR
 
 // Define your screens
 sealed class Screen(val route: String) {
@@ -60,7 +64,7 @@ fun MyAppNavigation(
         // Define your composable screens here
 
 
-    // Login Page
+        // Login Page
         composable(Screen.Login.route) {
             LoginPage(
                 modifier = modifier,
@@ -104,10 +108,21 @@ fun MyAppNavigation(
         composable(Screen.Map.route) {
             MapPage(
                 modifier = modifier,
-
-
-
             )
         }
+        composable("camera_page") {
+            CameraPage(
+                onImageCaptured = { bitmap ->
+                    // Handle the captured image here
+                    Log.d("CameraPage", "Image captured successfully.")
+                },
+                onBack = {
+                    navController.popBackStack() // Navigate back to the previous screen
+                    Log.d("BackPressed", "Navigated back from CameraPage.")
+                }
+            )
+        }
+
     }
 }
+

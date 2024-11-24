@@ -19,6 +19,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
+    private val _userRole = MutableLiveData<String>("employee")  // Default to 'employee'
+    val userRole: LiveData<String> get() = _userRole
 
     private val _authState = MutableLiveData<AuthState>(AuthState.Unauthenticated)
     val authState: LiveData<AuthState> get() = _authState
@@ -94,8 +96,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                                     val role = document.getString("role") ?: "employee" // Default to "employee"
                                     _authState.value = AuthState.Authenticated(user)
                                     // Optionally, store the role in user details or elsewhere
-                                    // For example, you can use a MutableLiveData to store the role:
-                                    // _userRole.value = role
                                 } else {
                                     _authState.value = AuthState.Unauthenticated
                                 }
@@ -113,61 +113,61 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-
     // Register a new account (sign-up)
         // Register a new account (sign-up)
-        fun signup(
-            email: String,
-            password: String,
-            employeeID: String,
-            username: String,
-            address: String,
-            contactNumber: String,
-            onSignUpSuccess: () -> Unit,
-            onSignUpFailure: (String) -> Unit
-        ) {
-            val auth = FirebaseAuth.getInstance()
-            val db = FirebaseFirestore.getInstance()
+    fun signup(
+        email: String,
+        password: String,
+        employeeID: String,
+        username: String,
+        address: String,
+        contactNumber: String,
+        onSignUpSuccess: () -> Unit,
+        onSignUpFailure: (String) -> Unit
+    ) {
+        val auth = FirebaseAuth.getInstance()
+        val db = FirebaseFirestore.getInstance()
 
-            auth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val userId = task.result?.user?.uid
-                        if (userId != null) {
-                            // Prepare user data from UserModel
-                            val userData = mapOf(
-                                "employeeID" to UserModel.value.employeeID,
-                                "username" to UserModel.value.username,
-                                "address" to UserModel.value.address,
-                                "contactNumber" to UserModel.value.contactNo,
-                                "email" to UserModel.value.email,
-                                "role" to if (email == "admin@example.com") "admin" else "employee" // Assign role based on email
-                            )
-
-                            // Save user data to Firestore
-                            db.collection("users")
-                                .document(userId)
-                                .set(userData)
-                                .addOnSuccessListener {
-                                    _authState.value = AuthState.Authenticated(auth.currentUser!!)
-                                    onSignUpSuccess() // Notify the success callback
-                                }
-                                .addOnFailureListener { e ->
-                                    onSignUpFailure("Failed to save user data: ${e.message}") // Provide failure feedback
-                                }
-                        } else {
-                            onSignUpFailure("User ID is null. Could not save user data.")
-                        }
-                    } else {
-                        onSignUpFailure(
-                            task.exception?.message ?: "Unknown error occurred during sign-up."
-                        )
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val userId = task.result?.user?.uid
+                    val user = FirebaseAuth.getInstance().currentUser
+                    val role = when {
+                        user?.email?.endsWith("@company.com") == true -> "admin"
+                        user?.email == "admin@company.com" -> "admin"
+                        else -> "employee"
                     }
+
+                    val userData = mapOf(
+                        "employeeID" to employeeID,
+                        "username" to username,
+                        "address" to address,
+                        "contactNumber" to contactNumber,
+                        "email" to email,
+                        "role" to role
+                    )
+
+                    if (userId != null) {
+                        db.collection("users")
+                            .document(userId)
+                            .set(userData)
+                            .addOnSuccessListener {
+                                _authState.value = AuthState.Authenticated(auth.currentUser!!)
+                                onSignUpSuccess() // Notify the success callback
+                            }
+                            .addOnFailureListener { e ->
+                                onSignUpFailure("Failed to save user data: ${e.message}")
+                            }
+                    }
+                } else {
+                    onSignUpFailure(task.exception?.message ?: "Unknown error occurred during sign-up.")
                 }
-                .addOnFailureListener { e ->
-                    onSignUpFailure("Sign-up failed: ${e.message}")
-                }
-        }
+            }
+            .addOnFailureListener { e ->
+                onSignUpFailure("Sign-up failed: ${e.message}")
+            }
+    }
 
 
     // Save user data to Firestore
