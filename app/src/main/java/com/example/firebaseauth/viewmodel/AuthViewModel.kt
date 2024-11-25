@@ -21,7 +21,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 
-
     private val _authState = MutableLiveData<AuthState>(AuthState.Unauthenticated)
     val authState: LiveData<AuthState> get() = _authState
 
@@ -39,7 +38,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val authStatus: MutableLiveData<AuthState.AuthResult> = MutableLiveData()
     val errorMessage: MutableLiveData<String> = MutableLiveData()
     val isLoading: MutableLiveData<Boolean> = MutableLiveData()
-    //val isAuthenticated by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
 
     val isAuthenticated: Boolean
         get() = FirebaseAuth.getInstance().currentUser != null
@@ -73,22 +71,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             "address" -> UserModel.value.copy(address = value)
             "contactNo" -> UserModel.value.copy(contactNo = value)
             else -> {
-                // Optionally log an error or ignore unsupported fields
                 UserModel.value
             }
         }
     }
 
 
-    fun login(email: String, password: String, navController: NavController) {
+    fun login(email: String?, password: String?, navController: NavController) {
+        if (email.isNullOrBlank() || password.isNullOrBlank()) {
+            return
+        }
+
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    // Get the email of the current logged-in user
                     val userEmail = auth.currentUser?.email ?: ""
                     val role = assignRoleBasedOnEmail(userEmail) // Assign the role based on the email
 
-                    Log.d("Login", "User logged in as $role")
+                    _authState.value = AuthState.LoggedIn(userEmail, role)
 
                     // Navigate to the appropriate screen based on the role
                     when (role) {
@@ -98,7 +98,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             }
                         }
                         "employee" -> {
-                            navController.navigate("employeeHome") { // Navigate to Employee Home
+                            navController.navigate("homepage") { // Navigate to Employee Home
                                 popUpTo("login") { inclusive = true } // Pop the Login screen from stack
                             }
                         }
@@ -107,36 +107,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 } else {
+                    // Log the error and optionally update a state for UI feedback
                     Log.e("Login", "Login failed: ${task.exception?.message}")
                 }
             }
     }
 
 
-    fun registerUser(email: String, password: String) {
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    val userId = auth.currentUser?.uid
-                    val role = assignRoleBasedOnEmail(email)
-                    val user = hashMapOf(
-                        "email" to email,
-                        "role" to role
-                    )
-                    if (userId != null) {
-                        db.collection("users").document(userId).set(user)
-                            .addOnSuccessListener {
-                                Log.d("Register", "User role assigned as $role")
-                            }
-                            .addOnFailureListener { exception ->
-                                Log.e("Register", "Error saving user data: ${exception.message}")
-                            }
-                    }
-                } else {
-                    Log.e("Register", "Registration failed: ${task.exception?.message}")
-                }
-            }
-    }
 
 
      fun assignRoleBasedOnEmail(email: String?): String {
@@ -147,10 +124,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
-
-    // Register a new account (sign-up)
-        // Register a new account (sign-up)
     fun signup(
         email: String,
         password: String,
@@ -205,67 +178,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-
-    // Save user data to Firestore
-        private fun saveUserToFirestore(
-            user: FirebaseUser,
-            userModel: UserModel,
-            onSuccess: () -> Unit,
-            onFailure: (String) -> Unit
-        ) {
-            val userRef = db.collection("users").document(user.uid)
-
-            userRef.set(userModel)
-                .addOnSuccessListener {
-                    Log.d("SignUp", "User data saved successfully to Firestore")
-                    onSuccess()
-                }
-                .addOnFailureListener { exception ->
-                    val errorMsg = exception.message ?: "Unknown error"
-                    Log.e("SignUp", "Firestore Error: $errorMsg")
-                    onFailure("Error saving user data: $errorMsg")
-                }
-
-
-            val currentUser: FirebaseUser? = auth.currentUser
-            currentUser?.let {
-                val userRef = db.collection("users").document(it.uid)
-                userRef.set(user)
-                    .addOnSuccessListener {
-                        authStatus.value = AuthState.AuthResult.Success(currentUser)
-                    }
-                    .addOnFailureListener { exception ->
-                        errorMessage.value = "Error saving data: ${exception.message}"
-                        authStatus.value = AuthState.AuthResult.Failure(exception.message)
-                    }
-            }
-        }
-
-        fun fetchUserDetails(userId: String) {
-            db.collection("users")
-                .document(userId)
-                .get()
-                .addOnSuccessListener { document ->
-                    if (document != null) {
-                        val user = document.toObject(UserModel::class.java)
-                        _userDetails.value = UserModel() // Update LiveData with user data
-                    } else {
-                        _userDetails.value = UserModel() // Empty user model if no data found
-                    }
-                }
-                .addOnFailureListener { exception ->
-                    Log.e("AuthViewModel", "Error getting user details: ${exception.message}")
-                }
-        }
-
-
-
-    // Call this method when user is authenticated
-
-
-
-
-    // Sign out the current user
         fun signOut() {
             try {
                 auth.signOut()
@@ -275,9 +187,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 errorMessage.value = "Error logging out: ${e.message}"
             }
         }
+}
 
-        // Get the current authenticated user
-        fun getCurrentUser(): FirebaseUser? {
-            return auth.currentUser
-        }
-    }
+

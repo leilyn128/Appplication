@@ -48,7 +48,7 @@ fun LoginPage(
     LaunchedEffect(authState.value) {
         when (val state = authState.value) {
             is AuthState.EmployeeAuthenticated -> {
-                navController.navigate("employeeHome") // Navigate on successful login
+                navController.navigate("homepage") // Navigate on successful login
             }
             is AuthState.AdminAuthenticated -> {
                 navController.navigate("adminHome") // Navigate on successful login
@@ -121,13 +121,14 @@ fun LoginPage(
             )
 
             // Login Button
-            Button(
-                onClick = { authViewModel.login(email, password, navController) }, // Using the ViewModel
-                enabled = authState.value !is AuthState.Loading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
+
+            Button(onClick = {
+                if (email.isNotEmpty() && password.isNotEmpty()) {
+                    authViewModel.login(email, password, navController)
+                } else {
+                    Toast.makeText(context, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
+                }
+            }) {
                 Text(text = "Login", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
 

@@ -1,5 +1,7 @@
-
 package com.example.firebaseauth.pages
+
+
+
 
 import AuthViewModel
 import androidx.compose.foundation.Image
@@ -29,14 +31,14 @@ import com.example.firebaseauth.R
 //mport com.example.firebaseauth.viewmodel.AuthViewModel
 
 @Composable
-fun Account(
+fun AccountAdmin(
     modifier: Modifier = Modifier,
     authViewModel: AuthViewModel = viewModel(),
     navController: NavController
 ) {
-
+    // Observe the authState
+    // val authState = authViewModel.authState.observeAsState()
     val authState = authViewModel.authState.observeAsState(AuthState.Unauthenticated)
-
 
 
 
@@ -84,13 +86,6 @@ fun Account(
                 color = Color.White
             )
 
-            IconButton(onClick = { /* Handle edit action */ }) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Icon",
-                    tint = Color.White
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -107,18 +102,18 @@ fun Account(
             Text("Loading...")
         } else if (user != null) {
             // User profile information rows
-            UserProfileInfo(label = "ID Number:", value = "764539")
-            UserProfileInfo(label = "Name:", value = user.displayName ?: "Unknown")
-            UserProfileInfo(label = "Email:", value = user.email ?: "No email")
-            UserProfileInfo(label = "Address:", value = "456 Elm St, Cityville")
-            UserProfileInfo(label = "Contact No:", value = "+9876543210")
+            UserProfile(label = "ID Number:", value = "764539")
+            UserProfile(label = "Name:", value = user.displayName ?: "No display name")
+            UserProfile(label = "Email:", value = user.email ?: "No email")
+            UserProfile(label = "Address:", value = "456 Elm St, Cityville")
+            UserProfile(label = "Contact No:", value = "+9876543210")
 
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    authViewModel.signOut() // Call signout method
+                    authViewModel.signOut( ) // Call signout method
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -137,7 +132,7 @@ fun Account(
 }
 
 @Composable
-fun UserProfileInfo(label: String, value: String) {
+fun UserProfile(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

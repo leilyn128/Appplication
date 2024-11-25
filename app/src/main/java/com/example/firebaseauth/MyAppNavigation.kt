@@ -14,17 +14,15 @@ import androidx.navigation.compose.rememberNavController
 import com.example.firebaseauth.activity.LocationHelper
 import com.example.firebaseauth.pages.HomePage
 import com.example.firebaseauth.pages.LoginPage
-import com.example.firebaseauth.pages.SignupPage
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.googlemappage.MapPage
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.*
+import com.example.firebaseauth.pages.Account
+import com.example.firebaseauth.pages.AccountAdmin
 import com.example.firebaseauth.pages.AdminHomePage
 
 
-import com.example.firebaseauth.pages.DTR
-
-// Define your screens
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Signup : Screen("signup")
@@ -43,10 +41,7 @@ fun MyAppNavigation(
     // Observe the auth state
     val authState by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
     val userRole by authViewModel.userRole.observeAsState()
-
     val context = LocalContext.current
-
-    // Create a LocationHelper instance
     val locationHelper = remember {
         LocationHelper(
             context = context,
@@ -60,13 +55,10 @@ fun MyAppNavigation(
         is AuthState.AdminAuthenticated -> "adminHome" // Admin's custom home route
         else -> Screen.Login.route
     }
-
     NavHost(
         navController = navController,
         startDestination = startDestination
     ) {
-        // Define the screens
-
         // Login Page
         composable("login") {
             LoginPage(
@@ -74,7 +66,6 @@ fun MyAppNavigation(
                 navController = navController,
                 authViewModel = authViewModel,
                 onLoginSuccess = {
-                    // Check the role here and navigate accordingly
                     val userEmail = authViewModel.auth.currentUser?.email ?: ""
                     val role = authViewModel.assignRoleBasedOnEmail(userEmail)
 
@@ -82,7 +73,8 @@ fun MyAppNavigation(
                         "admin" -> navController.navigate("adminHome") {
                             popUpTo("login") { inclusive = true }
                         }
-                        "employee" -> navController.navigate("employeeHome") {
+
+                        "employee" -> navController.navigate("homepage") {
                             popUpTo("login") { inclusive = true }
                         }
                     }
@@ -96,17 +88,33 @@ fun MyAppNavigation(
                 modifier = modifier,
                 navController = navController,
                 authViewModel = authViewModel,
-                role = "admin" // Pass role directly to HomePage
+                role = "admin"
             )
         }
 
         // Employee Home Page
-        composable("employeeHome") {
+        composable("homepage") {
             HomePage(
                 modifier = modifier,
                 navController = navController,
                 authViewModel = authViewModel,
-                role = "employee" // Pass role directly to HomePage
+                role = "employee"
+            )
+        }
+
+        // Account Pages
+        composable("account") {
+            Account(
+                modifier = modifier,
+                navController = navController,
+                authViewModel = authViewModel
+            )
+        }
+        composable("accountAdmin") {
+            AccountAdmin(
+                modifier = modifier,
+                navController = navController,
+                authViewModel = authViewModel
             )
         }
 
@@ -119,11 +127,10 @@ fun MyAppNavigation(
         composable("camera_page") {
             CameraPage(
                 onImageCaptured = { bitmap ->
-                    // Handle the captured image
                     Log.d("CameraPage", "Image captured successfully.")
                 },
                 onBack = {
-                    navController.popBackStack() // Navigate back
+                    navController.popBackStack()
                     Log.d("BackPressed", "Navigated back from CameraPage.")
                 }
             )

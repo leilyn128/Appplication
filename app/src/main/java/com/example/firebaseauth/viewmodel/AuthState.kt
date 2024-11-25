@@ -15,6 +15,7 @@ sealed class AuthState {
         data class EmployeeAuthenticated(val user: FirebaseUser) : AuthState()
         data class Error(val message: String) : AuthState()
         object None : AuthState()
+        data class LoggedIn(val email: String, val role: String) : AuthState()
 
     sealed class AuthResult {
         // Success: Store the FirebaseUser object on successful authentication
@@ -25,6 +26,7 @@ sealed class AuthState {
             com.example.firebaseauth.viewmodel.AuthState.AuthResult()
 
         object LoggedOut : com.example.firebaseauth.viewmodel.AuthState.AuthResult()
+
 
 
     }

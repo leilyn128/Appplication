@@ -8,20 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-
-
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.AccountCircle
 import com.example.firebaseauth.activity.GeofenceHelper
 import com.example.firebaseauth.ui.theme.NavItem
 
@@ -64,12 +58,8 @@ fun AdminHomePage(
             0 -> {
                 // Admin Geofence Page
                 GeofencePage(
-                    navController = navController,
-                    geofenceHelper = geofenceHelper,
-                    onGeofenceAdded = { geofence ->
-                        // Handle geofence addition logic
-                    },
-                    modifier = Modifier.padding(innerPadding) // Apply padding here
+                    navController = navController
+                    // Apply padding here
                 )
             }
             1 -> {
@@ -80,7 +70,7 @@ fun AdminHomePage(
             }
             2 -> {
                 // Admin Account Page
-                Account(
+                AccountAdmin(
                     authViewModel = authViewModel,
                     navController = navController,
                     modifier = Modifier.padding(innerPadding) // Apply padding here
