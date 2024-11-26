@@ -39,29 +39,10 @@ import java.util.*
 fun CameraPage(
     onBack: () -> Unit,
     onImageCaptured: (Uri) -> Unit,
-
+    onSaveImage: (Uri) -> Unit
 ) {
     var capturedImageUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
-
-    val navController = rememberNavController()
-
-
-
-
-    // Register the ActivityResultLauncher for capturing image
-    val takePictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture(),
-        onResult = { success ->
-            if (success && capturedImageUri != null) {
-                Log.d("CameraPage", "Image captured successfully: $capturedImageUri")
-                // Process the captured image for face detection
-            } else {
-                Log.e("CameraPage", "Failed to capture image.")
-                Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
-            }
-        }
-    )
 
     // File and URI for the image
     val imageFile = File(context.filesDir, "camera_photo.jpg")
@@ -70,6 +51,21 @@ fun CameraPage(
         "${context.packageName}.fileProvider",
         imageFile
     )
+
+    // Register the ActivityResultLauncher for capturing image
+    val takePictureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            Log.d("CameraPage", "Picture captured successfully")
+            capturedImageUri?.let { uri ->
+                // Handle the captured image URI and upload to Firebase or other actions
+                onImageCaptured(uri)  // You can pass the URI to the callback if needed
+                Toast.makeText(context, "Image captured", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Log.e("CameraPage", "Failed to capture image")
+            Toast.makeText(context, "Failed to capture image", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Request permission for camera
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -88,7 +84,7 @@ fun CameraPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            IconButton(onClick = { navController.popBackStack() }) {
+            IconButton(onClick = { onBack() }) {
                 Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
             }
         },
@@ -138,10 +134,14 @@ fun CameraPage(
                     ) {
                         Text("Take Picture")
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Button to save the captured image and navigate to DTR page
+
+                    }
                 }
-            }
+
         }
     )
 }
-
-//

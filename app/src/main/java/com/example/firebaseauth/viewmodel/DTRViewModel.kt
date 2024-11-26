@@ -32,9 +32,10 @@ class DTRViewModel : ViewModel() {
     // Get Current Month
     fun getCurrentMonth(): String {
         val calendar = Calendar.getInstance()
-        val format = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-        return format.format(calendar.time)
+        val month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
+        return month ?: "Unknown Month"
     }
+
 
     // Parse Time String to Date Object (HH:mm format)
     private fun parseTime(timeString: String): Date? {

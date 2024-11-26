@@ -2,6 +2,7 @@ package com.example.firebaseauth
 
 import AuthViewModel
 import CameraPage
+import DTRViewModel
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
@@ -18,9 +19,11 @@ import com.example.firebaseauth.viewmodel.AuthState
 import com.example.googlemappage.MapPage
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.*
+import androidx.lifecycle.ViewModel
 import com.example.firebaseauth.pages.Account
 import com.example.firebaseauth.pages.AccountAdmin
 import com.example.firebaseauth.pages.AdminHomePage
+import com.example.firebaseauth.pages.DTR
 
 
 sealed class Screen(val route: String) {
@@ -37,6 +40,9 @@ fun MyAppNavigation(
     currentLocation: LatLng? = null
 ) {
     val navController = rememberNavController()
+    val dtrViewModel = DTRViewModel()
+
+
 
     // Observe the auth state
     val authState by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
@@ -117,6 +123,15 @@ fun MyAppNavigation(
                 authViewModel = authViewModel
             )
         }
+        composable("Dtr") {
+            DTR(
+                modifier = Modifier,
+                dtrViewModel = dtrViewModel,
+                onNavigateToCamera = { navController.navigate("cameraPage") },
+                getCurrentMonth = { dtrViewModel.getCurrentMonth() } // Pass the lambda
+            )
+        }
+
 
         // Map Page
         composable(Screen.Map.route) {
@@ -124,16 +139,14 @@ fun MyAppNavigation(
         }
 
         // Camera Page
-        composable("camera_page") {
+        composable("cameraPage") {
             CameraPage(
-                onImageCaptured = { bitmap ->
-                    Log.d("CameraPage", "Image captured successfully.")
-                },
-                onBack = {
-                    navController.popBackStack()
-                    Log.d("BackPressed", "Navigated back from CameraPage.")
+                onBack = { navController.popBackStack() },
+                onImageCaptured = { uri -> /* Handle captured image */ },
+                onSaveImage = { uri ->
+                    navController.navigate("Dtr")  // Navigate after saving
                 }
             )
         }
-    }
-}
+    }}
+

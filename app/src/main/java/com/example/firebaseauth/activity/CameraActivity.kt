@@ -12,6 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.firebaseauth.databinding.ActivityCameraBinding
+import com.example.firebaseauth.activity.ClockInManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
@@ -25,6 +26,10 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 
 
 class CameraActivity : AppCompatActivity() {
+
+
+    val clockInManager = ClockInManager()
+
 
     private lateinit var binding: ActivityCameraBinding
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
@@ -89,14 +94,16 @@ class CameraActivity : AppCompatActivity() {
     private fun createUri(): Uri {
         try {
             val imageFile = File(applicationContext.filesDir, "camera_photo.jpg")
-            return FileProvider.getUriForFile(
+            val imageUri = FileProvider.getUriForFile(
                 applicationContext,
                 "com.example.firebaseauth.fileProvider",
                 imageFile
             )
+            Log.d("CameraActivity", "Created URI: $imageUri")  // Log the URI
+            return imageUri
         } catch (e: Exception) {
             Log.e("CameraActivity", "Error creating URI", e)
-            throw e // Rethrow the exception to crash early if URI creation fails
+            throw e  // Rethrow the exception to crash early if URI creation fails
         }
     }
 
@@ -148,16 +155,16 @@ class CameraActivity : AppCompatActivity() {
         // Save the image URL under the user's profile
         userDoc.update("profileImageUrl", imageUrl)
             .addOnSuccessListener {
-                Toast.makeText(this, "Profile image URL saved successfully", Toast.LENGTH_SHORT)
-                    .show()
+                Log.d("Firestore", "Profile image URL saved successfully")
+                Toast.makeText(this, "Profile image URL saved successfully", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { exception ->
+                Log.e("Firestore", "Failed to save profile image URL", exception)
                 Toast.makeText(
                     this,
                     "Failed to save profile image URL: ${exception.message}",
                     Toast.LENGTH_SHORT
                 ).show()
-                Log.e("Firestore", "Failed to save profile image URL", exception)
             }
     }
 
@@ -217,4 +224,12 @@ class CameraActivity : AppCompatActivity() {
             Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show()
         }
     }
+    fun onPhotoCaptured(photoUri: Uri) {
+        if (photoUri != null) {
+            clockInManager.timeIn(photoUri)
+        } else {
+            Toast.makeText(this, "No photo captured. Please try again.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 }

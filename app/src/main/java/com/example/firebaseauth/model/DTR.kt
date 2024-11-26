@@ -1,11 +1,10 @@
 package com.example.firebaseauth.model
 
-data class DTR(
-    val date: String, // Date in string format (e.g., "YYYY-MM-DD")
-    val morningArrival: String? = null,
-    val morningDeparture: String? = null,
-    val afternoonArrival: String? = null,
-    val afternoonDeparture: String? = null,
-    val remarks: String? = null // Optional remarks
+data class DTRRecord(
+    val date: String, // Use LocalDate if you need a specific date type
+    val morningArrival: String?,
+    val morningDeparture: String?,
+    val afternoonArrival: String?,
+    val afternoonDeparture: String?,
+    val timestamp: Long? = null // Add the timestamp to track when the DTR is saved
 )
-

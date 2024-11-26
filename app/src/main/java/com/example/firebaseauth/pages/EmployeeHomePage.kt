@@ -144,17 +144,21 @@ fun ContentScreen(
             if (userRole != "admin") {
                 // If employee, show CameraPage
                 CameraPage(
-                    onImageCaptured = { bitmap ->
-                        Log.d("CameraPage", "Image captured successfully.")
-                    },
                     onBack = {
-                        navController.popBackStack()
-                        Log.d("BackPressed", "Navigated back from CameraPage.")
+                        navController.popBackStack() // This will navigate back to the previous page
+                    },
+                    onImageCaptured = { uri ->
+                        // Handle image capture here
+                    },
+                    onSaveImage = { uri ->
+                        // Save the image and navigate to DTR page
+                        navController.navigate("Dtr") {
+                            popUpTo("cameraPage") {
+                                inclusive = true
+                            } // Removes camera page from stack
+                        }
                     }
                 )
-            } else {
-                // Admin: Navigate back to DTR instead of showing CameraPage
-                navController.popBackStack()
             }
         }
     }

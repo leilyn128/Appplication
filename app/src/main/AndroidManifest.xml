@@ -34,7 +34,7 @@
         ...>
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.firebaseauth.fileprovider"
+            android:authorities="com.example.firebaseauth.fileProvider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -54,6 +54,7 @@
         <service
             android:name=".activity.GeofenceBroadcastReceiver"
             android:exported="false" />
+
 
 
         <!-- Main Activity -->
