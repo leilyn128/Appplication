@@ -16,21 +16,22 @@ class DTRRepository(private val firestore: FirebaseFirestore) {
             val userId = FirebaseAuth.getInstance().currentUser?.uid
             if (userId != null) {
                 val documentRef = dtrCollection
-                    .document(userId)
-                    .collection("records")
-                    .document(dtr.date)
+                    .document(userId) // Use the user ID to store DTR under each user
+                    .collection("dtr_records") // Sub-collection for each user's DTR records
+                    .document(dtr.day.toString()) // Use the `day` as document ID (convert to string)
 
                 // Set timestamp using Firestore's server timestamp
                 val dtrMap = hashMapOf<String, Any?>(
-                    "date" to dtr.date,
-                    "morningArrival" to dtr.morningArrival,
-                    "morningDeparture" to dtr.morningDeparture,
-                    "afternoonArrival" to dtr.afternoonArrival,
-                    "afternoonDeparture" to dtr.afternoonDeparture,
-                    "timestamp" to FieldValue.serverTimestamp() // Firestore handles this
+                    "day" to dtr.day,
+                    "amArrival" to dtr.amArrival,
+                    "amDeparture" to dtr.amDeparture,
+                    "pmArrival" to dtr.pmArrival,
+                    "pmDeparture" to dtr.pmDeparture,
+                    "photoUrl" to dtr.photoUrl, // Store the photo URL if available
+                    "timestamp" to FieldValue.serverTimestamp() // Firestore handles this automatically
                 )
 
-                documentRef.set(dtrMap).await()
+                documentRef.set(dtrMap).await() // Save the DTR data in Firestore
             } else {
                 Log.e("DTRRepository", "User is not logged in.")
             }

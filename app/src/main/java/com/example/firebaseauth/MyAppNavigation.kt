@@ -20,10 +20,12 @@ import com.example.googlemappage.MapPage
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
+import androidx.navigation.NavController
 import com.example.firebaseauth.pages.Account
 import com.example.firebaseauth.pages.AccountAdmin
 import com.example.firebaseauth.pages.AdminHomePage
 import com.example.firebaseauth.pages.DTR
+import com.example.firebaseauth.pages.SignupPage
 
 
 sealed class Screen(val route: String) {
@@ -87,6 +89,19 @@ fun MyAppNavigation(
                 }
             )
         }
+        composable("signup") {
+            SignupPage(
+                modifier = Modifier, // Fixed syntax issue
+                navController = navController,
+                authViewModel = authViewModel,
+                onSignUpSuccess = {
+                    // Define what happens after successful signup
+                    navController.navigate("home") // Example navigation to home page
+                }
+            )
+        }
+
+
 
         // Admin Home Page
         composable("adminHome") {

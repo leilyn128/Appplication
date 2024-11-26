@@ -12,7 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.firebaseauth.databinding.ActivityCameraBinding
-import com.example.firebaseauth.activity.ClockInManager
+
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
@@ -28,7 +28,7 @@ import com.google.mlkit.vision.face.FaceDetectorOptions
 class CameraActivity : AppCompatActivity() {
 
 
-    val clockInManager = ClockInManager()
+
 
 
     private lateinit var binding: ActivityCameraBinding
@@ -224,12 +224,6 @@ class CameraActivity : AppCompatActivity() {
             Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show()
         }
     }
-    fun onPhotoCaptured(photoUri: Uri) {
-        if (photoUri != null) {
-            clockInManager.timeIn(photoUri)
-        } else {
-            Toast.makeText(this, "No photo captured. Please try again.", Toast.LENGTH_SHORT).show()
-        }
+
     }
 
-}

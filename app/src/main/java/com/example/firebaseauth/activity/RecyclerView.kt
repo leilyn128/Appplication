@@ -10,14 +10,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.firebaseauth.R
 import com.example.firebaseauth.model.DTRRecord
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QueryDocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-
 
 class DTRHistoryActivity : AppCompatActivity() {
 
@@ -40,31 +36,36 @@ class DTRHistoryActivity : AppCompatActivity() {
     // Fetch DTR records from Firestore
     private fun fetchDTRRecords() {
         val db = FirebaseFirestore.getInstance()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
 
-        db.collection("dtr_records")
+        if (userId == null) {
+            // Handle error when user is not logged in
+            return
+        }
+
+        db.collection("users") // Assuming the user collection
+            .document(userId) // Use the logged-in user ID
+            .collection("dtr_records") // Sub-collection for DTR records
             .get()
             .addOnSuccessListener { result: QuerySnapshot ->
                 val recordsList = mutableListOf<DTRRecord>()
                 for (document: QueryDocumentSnapshot in result) {
-                    // Convert Firestore Timestamp to Date, then to String
-                    val timestamp = document.getTimestamp("date")
-                    val date: Date = timestamp?.toDate() ?: Date()
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val formattedDate = dateFormat.format(date) // Convert Date to String
-
-                    // Extract the other fields from Firestore
-                    val morningArrival = document.getString("morningArrival")
-                    val morningDeparture = document.getString("morningDeparture")
-                    val afternoonArrival = document.getString("afternoonArrival")
-                    val afternoonDeparture = document.getString("afternoonDeparture")
+                    // Extract day, arrival, departure times, and photo URL
+                    val day = document.getLong("day")?.toInt() ?: 0
+                    val amArrival = document.getString("amArrival") ?: ""
+                    val amDeparture = document.getString("amDeparture") ?: ""
+                    val pmArrival = document.getString("pmArrival") ?: ""
+                    val pmDeparture = document.getString("pmDeparture") ?: ""
+                    val photoUrl = document.getString("photoUrl") // This could be nullable
 
                     // Create a DTRRecord object
                     val record = DTRRecord(
-                        date = formattedDate,
-                        morningArrival = morningArrival,
-                        morningDeparture = morningDeparture,
-                        afternoonArrival = afternoonArrival,
-                        afternoonDeparture = afternoonDeparture
+                        day = day,
+                        amArrival = amArrival,
+                        amDeparture = amDeparture,
+                        pmArrival = pmArrival,
+                        pmDeparture = pmDeparture,
+                        photoUrl = photoUrl
                     )
                     recordsList.add(record)
                 }
@@ -78,7 +79,7 @@ class DTRHistoryActivity : AppCompatActivity() {
             }
     }
 
-
+    // Adapter class for RecyclerView
     class DTRHistoryAdapter(private val dtrRecordsList: List<DTRRecord>) :
         RecyclerView.Adapter<DTRHistoryAdapter.DTRViewHolder>() {
 
@@ -91,15 +92,16 @@ class DTRHistoryActivity : AppCompatActivity() {
             val record = dtrRecordsList[position]
 
             // Bind the data to the views
-            holder.date.text = record.date // Directly bind the date string
-            holder.morningArrival.text = record.morningArrival ?: "-"
-            holder.morningDeparture.text = record.morningDeparture ?: "-"
-            holder.afternoonArrival.text = record.afternoonArrival ?: "-"
-            holder.afternoonDeparture.text = record.afternoonDeparture ?: "-"
+            holder.date.text = record.day.toString() // Displaying the day instead of date (based on your model)
+            holder.morningArrival.text = record.amArrival.takeIf { it.isNotEmpty() } ?: "-"
+            holder.morningDeparture.text = record.amDeparture.takeIf { it.isNotEmpty() } ?: "-"
+            holder.afternoonArrival.text = record.pmArrival.takeIf { it.isNotEmpty() } ?: "-"
+            holder.afternoonDeparture.text = record.pmDeparture.takeIf { it.isNotEmpty() } ?: "-"
         }
 
         override fun getItemCount(): Int = dtrRecordsList.size
 
+        // ViewHolder class for DTR records
         class DTRViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val date: TextView = itemView.findViewById(R.id.dtr_date)
             val morningArrival: TextView = itemView.findViewById(R.id.dtr_morning_in)

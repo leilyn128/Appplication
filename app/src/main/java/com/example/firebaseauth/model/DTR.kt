@@ -1,10 +1,10 @@
 package com.example.firebaseauth.model
 
 data class DTRRecord(
-    val date: String, // Use LocalDate if you need a specific date type
-    val morningArrival: String?,
-    val morningDeparture: String?,
-    val afternoonArrival: String?,
-    val afternoonDeparture: String?,
-    val timestamp: Long? = null // Add the timestamp to track when the DTR is saved
+    val day: Int,
+    var amArrival: String = "",
+    var amDeparture: String = "",
+    var pmArrival: String = "",
+    var pmDeparture: String = "",
+    var photoUrl: String? = null // URL of the photo stored in Firebase
 )

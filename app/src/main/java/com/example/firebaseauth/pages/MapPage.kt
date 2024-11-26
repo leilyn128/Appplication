@@ -65,7 +65,7 @@ fun MapPage(
     LaunchedEffect(Unit) {
         val firestore = FirebaseFirestore.getInstance()
         firestore.collection("geofences")
-            .document("geofenceId") // Use your document ID here
+            .document("bisu_clarin") // Use your document ID here
             .get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
