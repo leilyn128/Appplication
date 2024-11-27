@@ -1,7 +1,6 @@
 package com.example.firebaseauth.pages
 
 import AuthViewModel
-import CameraPage
 import DTRViewModel
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.ui.theme.NavItem
-//import com.example.firebaseauth.viewmodel.DTRViewModel
-import com.example.googlemappage.MapPage
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 
@@ -36,7 +34,7 @@ fun HomePage(
     val dtrViewModel: DTRViewModel = viewModel()
 
     // Retrieve user role from authViewModel
-    val userRole = authViewModel.userDetails.value?.role?: "employee"
+    val userRole = authViewModel.userDetails.value?.role ?: "employee"
 
     var selectedIndex by remember { mutableStateOf(0) }
     var timeInput by remember { mutableStateOf("") }
@@ -70,7 +68,12 @@ fun HomePage(
                     NavigationBarItem(
                         selected = selectedIndex == index,
                         onClick = { selectedIndex = index },
-                        icon = { Icon(imageVector = navItem.icon, contentDescription = navItem.label) },
+                        icon = {
+                            Icon(
+                                imageVector = navItem.icon,
+                                contentDescription = navItem.label
+                            )
+                        },
                         label = { Text(text = navItem.label) }
                     )
                 }
@@ -80,34 +83,31 @@ fun HomePage(
         ContentScreen(
             modifier = Modifier.padding(innerPadding),
             selectedIndex = selectedIndex,
-            onNavigateToCamera = { onBack ->
-                selectedIndex = 3 // Navigate to CameraPage
-                onBack(timeInput)
-            },
-            onBack = { time ->
-                timeInput = time
-                selectedIndex = 1 // Navigate back to DTR
-            },
             userRole = userRole, // Pass user role to ContentScreen
             authViewModel = authViewModel,
             navController = navController,
             currentLocation = currentLocation,
-            dtrViewModel = dtrViewModel
+            dtrViewModel  = dtrViewModel,
         )
     }
 }
+
+
 @Composable
 fun ContentScreen(
     modifier: Modifier = Modifier,
     selectedIndex: Int,
-    onNavigateToCamera: (onBack: (String) -> Unit) -> Unit,
-    onBack: (String) -> Unit,
     authViewModel: AuthViewModel,
     navController: NavController,
     currentLocation: LatLng?,
-    dtrViewModel: DTRViewModel,
+    dtrViewModel: DTRViewModel,  // Ensure the ViewModel is passed correctly
     userRole: String // Add userRole parameter
 ) {
+    val context = LocalContext.current // Get context
+
+    // Initialize FusedLocationProviderClient
+    val fusedLocationClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
+
     when (selectedIndex) {
         0 -> {
             // Display the map page
@@ -117,21 +117,9 @@ fun ContentScreen(
         1 -> {
             // Display the DTR page
             DTR(
-                onNavigateToCamera = {
-                    // Only show CameraPage for employees, not admins
-                    if (userRole != "admin") { // Ensure that userRole is defined somewhere
-                        // Directly navigate to the camera page if the user is not an admin
-                        navController.navigate("cameraPage")
-                    }
-                },
-                dtrViewModel = dtrViewModel,
-                getCurrentMonth = {
-                    java.time.Month.of(java.time.LocalDate.now().monthValue).name.lowercase()
-                        .replaceFirstChar { it.uppercase() }
-                },
-                context = LocalContext.current, // Get context here
-                fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalContext.current), // Initialize fusedLocationClient
-                navController = navController // Pass navController here
+                viewModel = dtrViewModel,  // Pass the viewModel as expected by DTR composable
+                employeeId = "someEmployeeId",  // Pass employeeId
+                fusedLocationClient = fusedLocationClient  // Pass fusedLocationClient
             )
         }
 
@@ -145,20 +133,10 @@ fun ContentScreen(
         }
 
         3 -> {
-            if (userRole != "admin") {
-                // If employee, show CameraPage
-                CameraPage(
-                    navController = navController,
-
-                    onImageCaptured = { uri ->
-
-                    },
-                    onSaveImage = { uri -> }
-
-                )
-            }
+            // Handle other screens
         }
     }
 }
+
 
 

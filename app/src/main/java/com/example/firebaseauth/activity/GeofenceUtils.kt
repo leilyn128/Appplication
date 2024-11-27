@@ -9,6 +9,10 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import kotlin.math.pow
 import kotlin.math.sqrt
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultCaller
+
 
 object GeofenceUtils {
     fun validateGeofenceAccess(
@@ -73,4 +77,27 @@ object GeofenceUtils {
         val c = 2 * Math.atan2(sqrt(a), sqrt(1 - a))
         return (earthRadius * c).toFloat()
     }
+fun isLocationPermissionGranted(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        android.Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+            || ContextCompat.checkSelfPermission(
+        context,
+        android.Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+}
+fun requestLocationPermission(activity: ComponentActivity) {
+    val requestPermissionLauncher = activity.registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission granted, continue with location access
+        } else {
+            // Permission denied, handle appropriately
+        }
+    }
+
+    requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+}
 

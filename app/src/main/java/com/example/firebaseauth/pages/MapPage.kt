@@ -1,4 +1,4 @@
-package com.example.googlemappage
+package com.example.firebaseauth.pages
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -21,7 +21,6 @@ import com.example.firebaseauth.activity.LocationHelper
 import com.example.firebaseauth.model.GeofenceData
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -82,16 +81,7 @@ fun MapPage(
     }
 
     // Request permission on first composition
-    LaunchedEffect(Unit) {
-        if (ActivityCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        } else {
-            locationHelper.startLocationUpdates()
-        }
-    }
+
 
     // Stop location updates when the composable is disposed
     DisposableEffect(Unit) {

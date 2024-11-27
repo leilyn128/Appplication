@@ -1,10 +1,13 @@
 package com.example.firebaseauth.model
 
+import java.util.Date
+
 data class DTRRecord(
-    val day: Int,
-    var amArrival: String? = null,  // Nullable type
-    var amDeparture: String? = null,  // Nullable type
-    var pmArrival: String? = null,  // Nullable type
-    var pmDeparture: String? = null,  // Nullable type
-    var photoUrl: String? = null // URL of the photo stored in Firebase
+    val employeeId: String,
+    val date: Date,
+    val morningArrival: Date?,
+    val morningDeparture: Date?,
+    val afternoonArrival: Date?,
+    val afternoonDeparture: Date?
+
 )
