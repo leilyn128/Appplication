@@ -1,5 +1,7 @@
 package com.example.firebaseauth.viewmodel
 
+import com.example.firebaseauth.model.DTRRecord
+
 // Updated DTRState
 data class DTRState(
     val timeIn: String = "",
@@ -8,10 +10,4 @@ data class DTRState(
     val DTRRecords: List<DTRRecord> = emptyList()
 )
 
-data class DTRRecord(
-    val day: Int,
-    val amIn: String? = null,
-    val amOut: String? = null,
-    val pmIn: String? = null,
-    val pmOut: String? = null
-)
+

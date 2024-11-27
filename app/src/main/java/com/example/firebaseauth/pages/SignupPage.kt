@@ -97,21 +97,6 @@ fun SignupPage(
             modifier = Modifier.fillMaxWidth(0.9f).padding(bottom = 16.dp)
         )
         OutlinedTextField(
-            value = userModel.address,
-            onValueChange = { authViewModel.updateUser("address", it) },
-            label = { Text("Address") },
-            leadingIcon = { Icon(Icons.Default.Home, contentDescription = "Address Icon") },
-            modifier = Modifier.fillMaxWidth(0.9f).padding(bottom = 16.dp)
-        )
-        OutlinedTextField(
-            value = userModel.contactNo,
-            onValueChange = { authViewModel.updateUser("contactNo", it) },
-            label = { Text("Contact Number") },
-            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Phone),
-            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = "Contact Icon") },
-            modifier = Modifier.fillMaxWidth(0.9f).padding(bottom = 16.dp)
-        )
-        OutlinedTextField(
             value = userModel.email,
             onValueChange = { authViewModel.updateUser("email", it) },
             label = { Text("Email") },
@@ -163,12 +148,10 @@ fun SignupPage(
                         email = userModel.email,
                         password = password,
                         username = userModel.username,
-                        contactNumber = userModel.contactNo,
-                        employeeID = userModel.employeeID,
-                        address = userModel.address,
+                        employeeID = userModel.employeeID, // Keep only the relevant fields
                         onSignUpSuccess = {
                             Toast.makeText(context, "Sign-Up Successful", Toast.LENGTH_SHORT).show()
-                            navController.navigate("home") {
+                            navController.navigate("homepage") {
                                 popUpTo("signup") { inclusive = true }
                             }
                         },
@@ -185,7 +168,9 @@ fun SignupPage(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .padding(bottom = 16.dp)
-        ) {
+        )
+
+        {
             Text(
                 text = "Sign Up",
                 fontSize = 20.sp
@@ -195,6 +180,7 @@ fun SignupPage(
         // Login link
         Row(
             horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Already have an account? ", fontSize = 20.sp)
@@ -202,5 +188,5 @@ fun SignupPage(
                 Text("Login", fontSize = 20.sp, color = Color.Blue)
             }
         }
+        }
     }
-}

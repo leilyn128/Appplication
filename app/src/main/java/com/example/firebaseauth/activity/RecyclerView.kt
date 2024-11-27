@@ -33,7 +33,6 @@ class DTRHistoryActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
     }
 
-    // Fetch DTR records from Firestore
     private fun fetchDTRRecords() {
         val db = FirebaseFirestore.getInstance()
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -93,11 +92,14 @@ class DTRHistoryActivity : AppCompatActivity() {
 
             // Bind the data to the views
             holder.date.text = record.day.toString() // Displaying the day instead of date (based on your model)
-            holder.morningArrival.text = record.amArrival.takeIf { it.isNotEmpty() } ?: "-"
-            holder.morningDeparture.text = record.amDeparture.takeIf { it.isNotEmpty() } ?: "-"
-            holder.afternoonArrival.text = record.pmArrival.takeIf { it.isNotEmpty() } ?: "-"
-            holder.afternoonDeparture.text = record.pmDeparture.takeIf { it.isNotEmpty() } ?: "-"
+
+            // Handle nullable strings safely using Elvis operator
+            holder.morningArrival.text = record.amArrival.takeIf { !it.isNullOrEmpty() } ?: "-"
+            holder.morningDeparture.text = record.amDeparture.takeIf { !it.isNullOrEmpty() } ?: "-"
+            holder.afternoonArrival.text = record.pmArrival.takeIf { !it.isNullOrEmpty() } ?: "-"
+            holder.afternoonDeparture.text = record.pmDeparture.takeIf { !it.isNullOrEmpty() } ?: "-"
         }
+
 
         override fun getItemCount(): Int = dtrRecordsList.size
 

@@ -26,6 +26,7 @@ import com.example.firebaseauth.pages.AccountAdmin
 import com.example.firebaseauth.pages.AdminHomePage
 import com.example.firebaseauth.pages.DTR
 import com.example.firebaseauth.pages.SignupPage
+import com.google.android.gms.location.LocationServices
 
 
 sealed class Screen(val route: String) {
@@ -128,7 +129,7 @@ fun MyAppNavigation(
             Account(
                 modifier = modifier,
                 navController = navController,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
             )
         }
         composable("accountAdmin") {
@@ -139,11 +140,16 @@ fun MyAppNavigation(
             )
         }
         composable("Dtr") {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalContext.current)
+
             DTR(
                 modifier = Modifier,
                 dtrViewModel = dtrViewModel,
                 onNavigateToCamera = { navController.navigate("cameraPage") },
-                getCurrentMonth = { dtrViewModel.getCurrentMonth() } // Pass the lambda
+                getCurrentMonth = { dtrViewModel.getCurrentMonth() },
+                context = LocalContext.current,
+                navController = navController,
+                fusedLocationClient = fusedLocationClient // Pass the initialized fusedLocationClient
             )
         }
 
@@ -153,14 +159,11 @@ fun MyAppNavigation(
             MapPage(modifier = modifier)
         }
 
-        // Camera Page
         composable("cameraPage") {
             CameraPage(
-                onBack = { navController.popBackStack() },
+                navController = navController, // Pass NavController to CameraPage
                 onImageCaptured = { uri -> /* Handle captured image */ },
-                onSaveImage = { uri ->
-                    navController.navigate("Dtr")  // Navigate after saving
-                }
+                onSaveImage = { uri -> /* Handle saving image */ }
             )
         }
     }}

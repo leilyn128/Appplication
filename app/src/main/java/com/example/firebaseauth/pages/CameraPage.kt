@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberImagePainter
 import com.example.firebaseauth.activity.uploadImageToFirebase
@@ -37,7 +38,7 @@ import java.util.*
 
 @Composable
 fun CameraPage(
-    onBack: () -> Unit,
+    navController: NavController,
     onImageCaptured: (Uri) -> Unit,
     onSaveImage: (Uri) -> Unit
 ) {
@@ -84,7 +85,7 @@ fun CameraPage(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            IconButton(onClick = { onBack() }) {
+            IconButton(onClick = { navController.popBackStack() }) { // Use popBackStack to go back
                 Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
             }
         },
@@ -137,7 +138,17 @@ fun CameraPage(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Button to save the captured image and navigate to DTR page
+                    Button(
+                        onClick = {
+                            capturedImageUri?.let { uri ->
+                                onSaveImage(uri)
+                                // Show a success message using Toast
+                                Toast.makeText(context, "Saved Successfully", Toast.LENGTH_SHORT).show()
+                            } ?: Log.e("SaveImage", "No image URI to save")
+                        }
+                    ) {
+                        Text("Save Picture")
+                    }
 
                     }
                 }

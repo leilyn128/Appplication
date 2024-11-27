@@ -11,7 +11,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.lifecycle.ViewModelProvider
+import com.example.firebaseauth.activity.uploadImageToFirebase
 import com.example.firebaseauth.databinding.ActivityCameraBinding
+import com.example.firebaseauth.model.DTRRecord
+import com.google.firebase.auth.FirebaseAuth
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -22,18 +26,15 @@ import java.util.*
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
-
+import java.text.SimpleDateFormat
 
 
 class CameraActivity : AppCompatActivity() {
 
-
-
-
-
     private lateinit var binding: ActivityCameraBinding
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
     private lateinit var imageUri: Uri
+    private lateinit var dtrViewModel: DTRViewModel
 
     companion object {
         private const val CAMERA_PERMISSION_CODE = 100
@@ -44,6 +45,9 @@ class CameraActivity : AppCompatActivity() {
         binding = ActivityCameraBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Initialize ViewModel
+        dtrViewModel = ViewModelProvider(this).get(DTRViewModel::class.java)
+
         // Initialize the image URI
         imageUri = createUri()
 
@@ -53,24 +57,8 @@ class CameraActivity : AppCompatActivity() {
                 if (success) {
                     // Display the captured image in the ImageView
                     binding.imageView.setImageURI(imageUri)
-
-                    // Upload the captured image to Firebase and register it
-                    uploadImageToFirebase(
-                        uri = imageUri,
-                        onUploadSuccess = { downloadUrl ->
-                            // Store the image URL in Firestore after upload
-                            saveImageUrlToFirestore(userId = "USER_ID", imageUrl = downloadUrl)
-                            Toast.makeText(
-                                this,
-                                "Image uploaded and registered successfully",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        onUploadFail = { error ->
-                            Toast.makeText(this, "Image upload failed: $error", Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    )
+                    // Detect face in the captured image
+                    detectFaceInImage(imageUri)
                 } else {
                     Toast.makeText(this, "Failed to capture image", Toast.LENGTH_SHORT).show()
                 }
@@ -79,7 +67,7 @@ class CameraActivity : AppCompatActivity() {
         // Set up the button to take a picture
         binding.btnTakePicture.setOnClickListener {
             if (checkCameraPermission()) {
-                if (imageUri != null) {
+                if (::imageUri.isInitialized) {
                     takePictureLauncher.launch(imageUri)
                 } else {
                     Log.e("CameraActivity", "imageUri is null!")
@@ -92,90 +80,38 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun createUri(): Uri {
-        try {
+        return try {
             val imageFile = File(applicationContext.filesDir, "camera_photo.jpg")
-            val imageUri = FileProvider.getUriForFile(
-                applicationContext,
-                "com.example.firebaseauth.fileProvider",
-                imageFile
-            )
-            Log.d("CameraActivity", "Created URI: $imageUri")  // Log the URI
-            return imageUri
+            FileProvider.getUriForFile(applicationContext, "com.example.firebaseauth.fileProvider", imageFile)
         } catch (e: Exception) {
             Log.e("CameraActivity", "Error creating URI", e)
-            throw e  // Rethrow the exception to crash early if URI creation fails
+            throw e
         }
     }
 
     private fun checkCameraPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestCameraPermission() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.CAMERA),
-            CAMERA_PERMISSION_CODE
-        )
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
     }
 
-    private fun uploadImageToFirebase(
-        uri: Uri,
-        onUploadSuccess: (String) -> Unit,
-        onUploadFail: (String) -> Unit
-    ) {
-        try {
-            val storageReference: StorageReference = FirebaseStorage.getInstance().reference
-            val fileName = "images/${UUID.randomUUID()}.jpg"
-
-            // Upload the image to Firebase Storage
-            val uploadTask = storageReference.child(fileName).putFile(uri)
-            uploadTask.addOnSuccessListener {
-                // Get the download URL of the uploaded image
-                storageReference.child(fileName).downloadUrl.addOnSuccessListener { downloadUri ->
-                    onUploadSuccess(downloadUri.toString())  // Pass the download URL
-                }
-            }.addOnFailureListener { exception ->
-                onUploadFail(exception.message ?: "Upload failed")  // Handle upload failure
-                Log.e("Firebase", "Upload failed", exception)
-            }
-        } catch (e: Exception) {
-            Log.e("Firebase", "Error uploading image", e)
-            onUploadFail("Error uploading image: ${e.message}")
+    // Handle permission results
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            takePictureLauncher.launch(imageUri)
+        } else {
+            Toast.makeText(this, "Camera permission required", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun saveImageUrlToFirestore(userId: String, imageUrl: String) {
-        val firestore = FirebaseFirestore.getInstance()
-        val userDoc = firestore.collection("users").document(userId)
-
-        // Save the image URL under the user's profile
-        userDoc.update("profileImageUrl", imageUrl)
-            .addOnSuccessListener {
-                Log.d("Firestore", "Profile image URL saved successfully")
-                Toast.makeText(this, "Profile image URL saved successfully", Toast.LENGTH_SHORT).show()
-            }
-            .addOnFailureListener { exception ->
-                Log.e("Firestore", "Failed to save profile image URL", exception)
-                Toast.makeText(
-                    this,
-                    "Failed to save profile image URL: ${exception.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
     }
 
     private fun detectFaceInImage(imageUri: Uri) {
         try {
             val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, imageUri)
-
-            // Convert the image to an InputImage
             val inputImage = InputImage.fromBitmap(bitmap, 0)
 
-            // Set up the Face Detector
             val options = FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
                 .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
@@ -184,35 +120,13 @@ class CameraActivity : AppCompatActivity() {
 
             val detector = FaceDetection.getClient(options)
 
-            // Process the image with face detection
             detector.process(inputImage)
                 .addOnSuccessListener { faces ->
                     if (faces.isNotEmpty()) {
                         // Face detected, proceed with upload
-                        uploadImageToFirebase(
-                            uri = imageUri,
-                            onUploadSuccess = { downloadUrl ->
-                                // Handle success: store the URL in Firestore, or any other action
-                                saveImageUrlToFirestore(userId = "USER_ID", imageUrl = downloadUrl)
-                                Toast.makeText(
-                                    this,
-                                    "Image uploaded and registered successfully",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            },
-                            onUploadFail = { error ->
-                                // Handle failure: show an error message
-                                Toast.makeText(
-                                    this,
-                                    "Image upload failed: $error",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        )
+                        uploadImageToFirebase(imageUri, ::onUploadSuccess, ::onUploadFail)
                     } else {
-                        // No face detected, show an error message
-                        Toast.makeText(this, "No face detected in the image", Toast.LENGTH_SHORT)
-                            .show()
+                        Toast.makeText(this, "No face detected in the image", Toast.LENGTH_SHORT).show()
                     }
                 }
                 .addOnFailureListener { e ->
@@ -225,5 +139,45 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun onUploadSuccess(photoUrl: String) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            saveImageUrlToFirestore(userId, photoUrl)
+        }
+        saveDTRRecord(photoUrl)
     }
 
+    private fun onUploadFail(error: String) {
+        Toast.makeText(this, "Image upload failed: $error", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun saveDTRRecord(photoUrl: String) {
+        val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val arrivalTime = timeFormat.format(Calendar.getInstance().time)
+
+        val dtrRecord = DTRRecord(
+            day = currentDay,
+            amArrival = arrivalTime,
+            amDeparture = "",  // Use empty string instead of null
+            pmArrival = "",    // Use empty string instead of null
+            pmDeparture = "",  // Use empty string instead of null
+            photoUrl = photoUrl
+        )
+
+
+        dtrViewModel.saveDTR(dtrRecord)
+    }
+
+    private fun saveImageUrlToFirestore(userId: String, imageUrl: String) {
+        val firestore = FirebaseFirestore.getInstance()
+        val userDoc = firestore.collection("users").document(userId)
+        userDoc.update("profileImageUrl", imageUrl)
+            .addOnSuccessListener {
+                Log.d("Firestore", "Profile image URL saved successfully")
+            }
+            .addOnFailureListener { exception ->
+                Log.e("Firestore", "Failed to save profile image URL", exception)
+            }
+    }
+}

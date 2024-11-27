@@ -9,8 +9,7 @@ import kotlinx.coroutines.tasks.await
 
 class DTRRepository(private val firestore: FirebaseFirestore) {
 
-    private val dtrCollection = firestore.collection("Records") // Collection where DTR is stored
-
+    private val dtrCollection = firestore.collection("Records") 
     suspend fun saveDTR(dtr: DTRRecord) {
         try {
             val userId = FirebaseAuth.getInstance().currentUser?.uid

@@ -1,6 +1,8 @@
 package com.example.firebaseauth.pages
 
 import DTRViewModel
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,64 +24,121 @@ import com.example.firebaseauth.R
 import com.example.firebaseauth.model.DTRRecord
 import java.util.Calendar
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import com.example.firebaseauth.activity.GeofenceUtils
+import com.example.firebaseauth.model.GeofenceData
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun DTR(
     modifier: Modifier = Modifier,
     dtrViewModel: DTRViewModel,
     onNavigateToCamera: () -> Unit,
-    getCurrentMonth: () -> String
+    getCurrentMonth: () -> String,
+    fusedLocationClient: FusedLocationProviderClient,
+    context: Context,
+    navController: NavController
 ) {
-    val dtrHistory by dtrViewModel.dtrHistory.collectAsState(emptyList())
+    val geofenceData by dtrViewModel.geofenceData.observeAsState(GeofenceData(LatLng(0.0, 0.0), 0.0))
+    val geofenceCenter = geofenceData.center
+    val geofenceLatitude = geofenceCenter.latitude
+    val geofenceLongitude = geofenceCenter.longitude
+    val geofenceRadius = geofenceData.radius
 
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        // Custom Header Section (without TopAppBar)
-        DTRCustomHeader(onNavigateToCamera)
+        // Pass the geofence data to the header
+        DTRCustomHeader(
+            fusedLocationClient = fusedLocationClient,
+            geofenceLatitude = geofenceLatitude,
+            geofenceLongitude = geofenceLongitude,
+            geofenceRadius = geofenceRadius,
+            onNavigateToCamera = onNavigateToCamera,
+            context = context,
+            navController = navController
+        )
 
         // Main Content Section
-        DTRContent(dtrHistory, getCurrentMonth)
+        DTRContent(dtrViewModel.dtrHistory.collectAsState(emptyList()).value, getCurrentMonth)
+
+
     }
 }
 
+
+
+
 @Composable
-fun DTRCustomHeader(onNavigateToCamera: () -> Unit) {
-    // Custom Header Layout with Logo on Left
-    Row(
+fun DTRCustomHeader(
+    fusedLocationClient: FusedLocationProviderClient,
+    geofenceLatitude: Double,
+    geofenceLongitude: Double,
+    geofenceRadius: Double,
+    onNavigateToCamera: () -> Unit,
+    context: Context,
+    navController: NavController
+) {
+    val customGreen = Color(0xFF5F8C60) // Define the custom green color
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF5F8C60)) // Green color for background
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.Start, // Align items to the start
-        verticalAlignment = Alignment.CenterVertically // Align items vertically in the center
+            .background(customGreen) // Use the custom green color
+            .padding(vertical = 12.dp)
     ) {
-        // Logo Image (Insert your logo here)
+        // Logo positioned at the top-left
         Image(
             painter = painterResource(id = R.drawable.logo), // Replace with your logo resource
-            contentDescription = "App Logo",
+            contentDescription = "Logo",
             modifier = Modifier
-                .size(70.dp) // Adjust size of logo
-                .padding(end = 16.dp) // Add padding between logo and text
+                .size(60.dp)
+                .align(Alignment.TopStart)
+                .padding(start = 16.dp)
         )
 
-        // Title Text (Centered relative to the remaining space)
+        // Title centered horizontally
         Text(
             text = "Daily Time Record",
-            fontWeight = FontWeight.Bold,
-            fontSize = 25.sp,
             color = Color.White,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f) // This will make the text take up remaining space
+            modifier = Modifier.align(Alignment.Center)
         )
 
-        // Camera Icon Button
-        IconButton(onClick = onNavigateToCamera) {
-            Icon(imageVector = Icons.Default.Camera, contentDescription = "Open Camera")
+        // Button with camera icon placed on the right side
+        IconButton(
+            onClick = {
+                // Validate geofence access and navigate to camera page
+                GeofenceUtils.validateGeofenceAccess(
+                    fusedLocationClient = fusedLocationClient,
+                    geofenceLatitude = geofenceLatitude,
+                    geofenceLongitude = geofenceLongitude,
+                    geofenceRadius = geofenceRadius,
+                    context = context,
+                    onSuccess = {
+                        navController.navigate("cameraPage")
+                    },
+                    onFailure = { errorMessage ->
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                )
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Camera,
+                contentDescription = "Camera Icon",
+                tint = Color.White
+            )
         }
     }
 }
-
 
 @Composable
 fun DTRContent(dtrHistory: List<DTRRecord>, getCurrentMonth: () -> String) {
@@ -133,13 +192,13 @@ fun DTRTableHeader() {
             textAlign = TextAlign.Center
         )
         Text(
-            text = "A.M. Arrival",
+            text = "A.M.",
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(2f),
             textAlign = TextAlign.Center
         )
         Text(
-            text = "P.M. Departure",
+            text = "P.M.",
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(2f),
             textAlign = TextAlign.Center
@@ -152,53 +211,103 @@ fun DTRTableRow(record: DTRRecord) {
     // Get the current day of the month
     val dayOfMonth = remember { getCurrentDayOfMonth() }
 
+    // Ensuring visibility with a bright color
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (dayOfMonth % 2 == 0) Color.White else Color.LightGray) // Alternate row color
-            .padding(vertical = 8.dp), // Adjust vertical padding to give space for times
+            .background(Color.Yellow) // Use bright color for visibility
+            .border(2.dp, Color.Black) // Border for visual confirmation
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         // Display the day of the month (1, 2, 3, etc.)
         Text(
             text = dayOfMonth.toString(),
             modifier = Modifier.weight(1f),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = Color.Black // Black text for visibility
         )
 
-        // Display A.M. Arrival and Departure
+        // AM Section
         Column(
             modifier = Modifier.weight(2f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "A.M. Arrival",
+                text = "AM",
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = Color.Black
             )
             Text(
-                text = record.amArrival.ifEmpty { "____" },
-                textAlign = TextAlign.Center
+                text = record.amArrival?.takeIf { it.isNotEmpty() } ?: "____",
+                textAlign = TextAlign.Center,
+                color = Color.Black
+            )
+            Text(
+                text = record.amDeparture?.takeIf { it.isNotEmpty() } ?: "____",
+                textAlign = TextAlign.Center,
+                color = Color.Black
             )
         }
 
-        // Display P.M. Arrival and Departure
+        // PM Section
         Column(
             modifier = Modifier.weight(2f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "P.M. Departure",
+                text = "PM",
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = Color.Black
             )
             Text(
-                text = record.pmDeparture.ifEmpty { "____" },
-                textAlign = TextAlign.Center
+                text = record.pmArrival?.takeIf { it.isNotEmpty() } ?: "____",
+                textAlign = TextAlign.Center,
+                color = Color.Black
+            )
+            Text(
+                text = record.pmDeparture?.takeIf { it.isNotEmpty() } ?: "____",
+                textAlign = TextAlign.Center,
+                color = Color.Black
             )
         }
     }
 }
+
+
+@Composable
+fun DTRTable() {
+    // Hardcoded dummy data for testing
+    val record = DTRRecord(
+        day = 1,
+        amArrival = "8:00 AM",
+        amDeparture = "12:00 PM",
+        pmArrival = "1:00 PM",
+        pmDeparture = "5:00 PM"
+    )
+
+    // Add a simple Column layout
+    Column(modifier = Modifier.padding(16.dp)) {
+        // Add debugging Text to check the hierarchy
+        Text(text = "DTR Table", color = Color.Black)
+
+        // Add the DTRTableRow to make sure it's being displayed
+        DTRTableRow(record = record)
+
+        // More debugging Text to verify rendering
+        Text(text = "End of Row", color = Color.Black)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DefaultPreview() {
+    DTRTable()
+}
+
+
 
 // Helper function to get the current day of the month
 fun getCurrentDayOfMonth(): Int {

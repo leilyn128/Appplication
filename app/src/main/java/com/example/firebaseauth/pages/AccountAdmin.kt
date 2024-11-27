@@ -71,12 +71,7 @@ fun AccountAdmin(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = { /* Handle account details action */ }) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Account Icon",
-                    tint = Color.White
-                )
+
             }
 
             Text(
@@ -91,7 +86,7 @@ fun AccountAdmin(
         Spacer(modifier = Modifier.height(16.dp))
 
         Image(
-            painter = painterResource(id = R.drawable.img_1), // Replace with your profile picture resource
+            painter = painterResource(id = R.drawable.img_1),
             contentDescription = "Profile Picture",
             modifier = Modifier.size(100.dp)
         )
@@ -101,19 +96,15 @@ fun AccountAdmin(
         if (loading) {
             Text("Loading...")
         } else if (user != null) {
-            // User profile information rows
-            UserProfile(label = "ID Number:", value = "764539")
-            UserProfile(label = "Name:", value = user.displayName ?: "No display name")
+
             UserProfile(label = "Email:", value = user.email ?: "No email")
-            UserProfile(label = "Address:", value = "456 Elm St, Cityville")
-            UserProfile(label = "Contact No:", value = "+9876543210")
 
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    authViewModel.signOut( ) // Call signout method
+                    authViewModel.signOut( )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,7 +120,6 @@ fun AccountAdmin(
             }
         }
     }
-}
 
 @Composable
 fun UserProfile(label: String, value: String) {

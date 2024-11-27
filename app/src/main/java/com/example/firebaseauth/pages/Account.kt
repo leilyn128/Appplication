@@ -26,75 +26,47 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.R
-//mport com.example.firebaseauth.viewmodel.AuthViewModel
+import com.example.firebaseauth.model.ProfileViewModel
+
 
 @Composable
 fun Account(
     modifier: Modifier = Modifier,
     authViewModel: AuthViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel(),
     navController: NavController
 ) {
-
     val authState = authViewModel.authState.observeAsState(AuthState.Unauthenticated)
-
-
-
-
-    // Watch for changes in the authState to navigate when the user logs out
     LaunchedEffect(authState.value) {
         if (authState.value is AuthState.Unauthenticated) {
             // Navigate to login screen after successful logout
             navController.navigate("login") {
-                // Clear the back stack so the user can't go back to the account page
                 popUpTo("login") { inclusive = true }
                 launchSingleTop = true // Prevent creating a new instance of the login page if already on it
             }
         }
     }
 
-    // Handle loading state if required
     val loading = authState.value is AuthState.Loading
     val user = (authState.value as? AuthState.Authenticated)?.user
+
+    // Load user profile
+    LaunchedEffect(true) {
+        profileViewModel.loadUserProfile()
+    }
+
+    val userProfileState = profileViewModel.userProfile.observeAsState() // Observe the profile state
+    val userProfile = userProfileState.value // Extract the value from the State object
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF5F8C60))
             .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.Top,
+        verticalArrangement = Arrangement.Center, // Center the content vertically
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = { /* Handle account details action */ }) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Account Icon",
-                    tint = Color.White
-                )
-            }
-
-            Text(
-                text = "Profile Details",
-                fontSize = 25.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-
-            IconButton(onClick = { /* Handle edit action */ }) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Icon",
-                    tint = Color.White
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+        // Profile Picture
         Image(
             painter = painterResource(id = R.drawable.img_1), // Replace with your profile picture resource
             contentDescription = "Profile Picture",
@@ -103,58 +75,34 @@ fun Account(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (loading) {
-            Text("Loading...")
-        } else if (user != null) {
-            // User profile information rows
-            UserProfileInfo(label = "ID Number:", value = "764539")
-            UserProfileInfo(label = "Name:", value = user.displayName ?: "Unknown")
-            UserProfileInfo(label = "Email:", value = user.email ?: "No email")
-            UserProfileInfo(label = "Address:", value = "456 Elm St, Cityville")
-            UserProfileInfo(label = "Contact No:", value = "+9876543210")
-
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    authViewModel.signOut() // Call signout method
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp)
-                    .padding(bottom = 16.dp)
-            ) {
-                Text(
-                    text = "Log Out",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+        // Check if userProfile is not null and display it
+        if (userProfile != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                UserProfile(label = "ID Number:", value = userProfile.employeeID)
+                UserProfile(label = "Name:", value = userProfile.username)
+                UserProfile(label = "Email:", value = userProfile.email)
             }
+        } else {
+            Text("Loading...", color = Color.White) // Show loading text while profile data is being loaded
         }
-    }
-}
 
-@Composable
-fun UserProfileInfo(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        Text(
-            text = value,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color.White
-        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Log Out Button
+        Button(
+            onClick = {
+                authViewModel.signOut() // Call signout method
+            },
+            modifier = Modifier
+                .fillMaxWidth(0.9f) // Slightly reduce the width for a more centered button
+                .padding(bottom = 16.dp)
+        ) {
+            Text(
+                text = "Log Out",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
     }
 }

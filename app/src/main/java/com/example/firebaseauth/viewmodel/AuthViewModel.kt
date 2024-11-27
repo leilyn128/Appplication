@@ -68,8 +68,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             "email" -> UserModel.value.copy(email = value)
             "username" -> UserModel.value.copy(username = value)
             "employeeId" -> UserModel.value.copy(employeeID = value)
-            "address" -> UserModel.value.copy(address = value)
-            "contactNo" -> UserModel.value.copy(contactNo = value)
             else -> {
                 UserModel.value
             }
@@ -81,41 +79,30 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         if (email.isNullOrBlank() || password.isNullOrBlank()) {
             return
         }
-
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val userEmail = auth.currentUser?.email ?: ""
-                    val role = assignRoleBasedOnEmail(userEmail) // Assign the role based on the email
-
+                    val role = assignRoleBasedOnEmail(userEmail)
                     _authState.value = AuthState.LoggedIn(userEmail, role)
-
-                    // Navigate to the appropriate screen based on the role
                     when (role) {
                         "admin" -> {
-                            navController.navigate("adminHome") { // Navigate to Admin Home
-                                popUpTo("login") { inclusive = true } // Pop the Login screen from stack
+                            navController.navigate("adminHome") {
+                                popUpTo("login") { inclusive = true }
                             }
                         }
                         "employee" -> {
-                            navController.navigate("homepage") { // Navigate to Employee Home
-                                popUpTo("login") { inclusive = true } // Pop the Login screen from stack
+                            navController.navigate("homepage") {
+                                popUpTo("login") { inclusive = true }
                             }
                         }
                         else -> {
                             Log.e("Login", "Unknown role: $role")
                         }
                     }
-                } else {
-                    // Log the error and optionally update a state for UI feedback
-                    Log.e("Login", "Login failed: ${task.exception?.message}")
                 }
             }
     }
-
-
-
-
      fun assignRoleBasedOnEmail(email: String?): String {
         return if (email == "admin10@example.com") { // Replace with the actual admin email
             "admin"
@@ -129,8 +116,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         password: String,
         employeeID: String,
         username: String,
-        address: String,
-        contactNumber: String,
         onSignUpSuccess: () -> Unit,
         onSignUpFailure: (String) -> Unit
     ) {
@@ -142,19 +127,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (task.isSuccessful) {
                     val userId = task.result?.user?.uid
                     val user = FirebaseAuth.getInstance().currentUser
-                    val role = when {
-                        user?.email?.endsWith("@company.com") == true -> "admin"
-                        user?.email == "admin@company.com" -> "admin"
-                        else -> "employee"
-                    }
-
                     val userData = mapOf(
                         "employeeID" to employeeID,
                         "username" to username,
-                        "address" to address,
-                        "contactNumber" to contactNumber,
-                        "email" to email,
-                        "role" to role
+                        "email" to email
                     )
 
                     if (userId != null) {
@@ -163,7 +139,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             .set(userData)
                             .addOnSuccessListener {
                                 _authState.value = AuthState.Authenticated(auth.currentUser!!)
-                                onSignUpSuccess() // Notify the success callback
+                                onSignUpSuccess()
                             }
                             .addOnFailureListener { e ->
                                 onSignUpFailure("Failed to save user data: ${e.message}")

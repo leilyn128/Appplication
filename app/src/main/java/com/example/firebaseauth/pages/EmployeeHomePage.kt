@@ -14,12 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.ui.theme.NavItem
 //import com.example.firebaseauth.viewmodel.DTRViewModel
 import com.example.googlemappage.MapPage
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 
 
@@ -117,17 +119,19 @@ fun ContentScreen(
             DTR(
                 onNavigateToCamera = {
                     // Only show CameraPage for employees, not admins
-                    if (userRole != "admin") {
-                        onNavigateToCamera { result ->
-                            println("Photo result: $result")
-                        }
+                    if (userRole != "admin") { // Ensure that userRole is defined somewhere
+                        // Directly navigate to the camera page if the user is not an admin
+                        navController.navigate("cameraPage")
                     }
                 },
                 dtrViewModel = dtrViewModel,
                 getCurrentMonth = {
                     java.time.Month.of(java.time.LocalDate.now().monthValue).name.lowercase()
                         .replaceFirstChar { it.uppercase() }
-                }
+                },
+                context = LocalContext.current, // Get context here
+                fusedLocationClient = LocationServices.getFusedLocationProviderClient(LocalContext.current), // Initialize fusedLocationClient
+                navController = navController // Pass navController here
             )
         }
 
@@ -144,22 +148,17 @@ fun ContentScreen(
             if (userRole != "admin") {
                 // If employee, show CameraPage
                 CameraPage(
-                    onBack = {
-                        navController.popBackStack() // This will navigate back to the previous page
-                    },
+                    navController = navController,
+
                     onImageCaptured = { uri ->
-                        // Handle image capture here
+
                     },
-                    onSaveImage = { uri ->
-                        // Save the image and navigate to DTR page
-                        navController.navigate("Dtr") {
-                            popUpTo("cameraPage") {
-                                inclusive = true
-                            } // Removes camera page from stack
-                        }
-                    }
+                    onSaveImage = { uri -> }
+
                 )
             }
         }
     }
 }
+
+
