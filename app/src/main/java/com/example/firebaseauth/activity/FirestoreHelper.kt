@@ -7,7 +7,6 @@ class FirestoreHelper {
 
     private val db = FirebaseFirestore.getInstance()
 
-    // Fetch user role from Firestore based on user UID
     fun getUserRole(onRoleFetched: (String) -> Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
@@ -23,11 +22,10 @@ class FirestoreHelper {
                     }
                 }
                 .addOnFailureListener {
-                    onRoleFetched("employee") // Default to employee if error occurs
+                    onRoleFetched("employee")
                 }
         } else {
-            onRoleFetched("employee") // Default to employee if no user is logged in
+            onRoleFetched("employee")
         }
     }
 }
-///

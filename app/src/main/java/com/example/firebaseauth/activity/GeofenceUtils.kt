@@ -1,65 +1,48 @@
-package com.example.firebaseauth.activity
+package com.example.yourapp.utils
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.Location
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import android.widget.Toast
 import com.google.android.gms.location.FusedLocationProviderClient
 import kotlin.math.pow
 import kotlin.math.sqrt
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultCaller
-
 
 object GeofenceUtils {
+
     fun validateGeofenceAccess(
         fusedLocationClient: FusedLocationProviderClient,
         geofenceLatitude: Double,
         geofenceLongitude: Double,
-        geofenceRadius: Double,  // Convert to Float if needed
+        geofenceRadius: Double,
         context: Context,
         onSuccess: () -> Unit,
         onFailure: (String) -> Unit
     ) {
-        try {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location: Location? ->
-                    if (location != null) {
-                        if (isWithinGeofence(location, geofenceLatitude, geofenceLongitude, geofenceRadius)) {
-                            onSuccess()
-                        } else {
-                            onFailure("You must be within the geofenced area to clock in.")
-                        }
-                    } else {
-                        onFailure("Unable to fetch location. Please check your GPS settings.")
-                    }
-                }
-                .addOnFailureListener {
-                    onFailure("Failed to retrieve location. Please try again.")
-                }
-        } catch (e: SecurityException) {
-            onFailure("Permission denied. Cannot access location.")
-        }
-    }
-}
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    val userLatitude = location.latitude
+                    val userLongitude = location.longitude
 
-    private fun isWithinGeofence(
-        location: Location,
-        geofenceLatitude: Double,
-        geofenceLongitude: Double,
-        geofenceRadius: Double
-    ): Boolean {
-        // Calculate the distance between the current location and the geofence center
-        val distance = calculateDistance(
-            location.latitude,
-            location.longitude,
-            geofenceLatitude,
-            geofenceLongitude
-        )
-        return distance <= geofenceRadius
+                    // Calculate distance between user and geofence
+                    val distance = calculateDistance(
+                        userLatitude,
+                        userLongitude,
+                        geofenceLatitude,
+                        geofenceLongitude
+                    )
+
+                    if (distance <= geofenceRadius) {
+                        onSuccess()
+                    } else {
+                        onFailure("You are not within the geofenced area.")
+                    }
+                } else {
+                    onFailure("Could not determine your location.")
+                }
+            }
+            .addOnFailureListener {
+                onFailure("Error fetching location: ${it.message}")
+            }
     }
 
     private fun calculateDistance(
@@ -67,37 +50,7 @@ object GeofenceUtils {
         lon1: Double,
         lat2: Double,
         lon2: Double
-    ): Float {
-        val earthRadius = 6371000.0 // Radius of the Earth in meters
-
-        val dLat = Math.toRadians(lat2 - lat1)
-        val dLon = Math.toRadians(lon2 - lon1)
-        val a = Math.sin(dLat / 2).pow(2.0) +
-                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.sin(dLon / 2).pow(2.0)
-        val c = 2 * Math.atan2(sqrt(a), sqrt(1 - a))
-        return (earthRadius * c).toFloat()
+    ): Double {
+        return sqrt((lat1 - lat2).pow(2) + (lon1 - lon2).pow(2)) * 111_000 // Approx meters
     }
-fun isLocationPermissionGranted(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(
-        context,
-        android.Manifest.permission.ACCESS_FINE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-            || ContextCompat.checkSelfPermission(
-        context,
-        android.Manifest.permission.ACCESS_COARSE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
 }
-fun requestLocationPermission(activity: ComponentActivity) {
-    val requestPermissionLauncher = activity.registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            // Permission granted, continue with location access
-        } else {
-            // Permission denied, handle appropriately
-        }
-    }
-
-    requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
-}
-

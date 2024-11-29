@@ -25,7 +25,7 @@ class ProfileViewModel : ViewModel() {
                     }
                 }
                 .addOnFailureListener {
-                    // Handle failure
+
                 }
         }
     }

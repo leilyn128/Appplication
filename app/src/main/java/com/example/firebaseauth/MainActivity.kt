@@ -52,10 +52,8 @@ fun MainContent(
     authViewModel: AuthViewModel,
     currentLocation: LatLng?
 ) {
-    // Use NavController for navigation
     val navController = rememberNavController()
 
-    // Set up navigation
     MyAppNavigation(
         authViewModel = authViewModel,
         currentLocation = currentLocation

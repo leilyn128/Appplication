@@ -3,21 +3,17 @@ package com.example.firebaseauth.activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.location.Location
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.example.firebaseauth.model.DTRRecord
-import com.example.firebaseauth.model.GeofenceData
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
 import com.google.android.gms.location.LocationServices
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.util.*
-import android.Manifest
-
 
 class GeofenceReceiver : BroadcastReceiver() {
 
@@ -26,22 +22,24 @@ class GeofenceReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
 
-        // Ensure geofencingEvent is not null
+
         geofencingEvent?.let {
             if (it.hasError()) {
-                // Handle error
+
                 return
             }
 
             val transition = it.geofenceTransition
             val triggerTime = Calendar.getInstance().time
-            val employeeId = getUserIdFromPreferences(context)
+            val email = getEmailFromFirebaseAuth()
 
+            if (email.isNullOrEmpty()) {
+                Toast.makeText(context, "User email not found", Toast.LENGTH_SHORT).show()
+                return
+            }
 
-
-            // Fetch the geofence data from Firestore
             db.collection("geofences")
-                .document("bisu_clarin") // Use your document ID here
+                .document("bisu_clarin")
                 .get()
                 .addOnSuccessListener { document ->
                     if (document.exists()) {
@@ -52,10 +50,10 @@ class GeofenceReceiver : BroadcastReceiver() {
 
                         when (transition) {
                             Geofence.GEOFENCE_TRANSITION_ENTER -> {
-                                handleEnterGeofence(context, employeeId, triggerTime, geofenceLatLng, radius)
+                                handleEnterGeofence(context, email, triggerTime, geofenceLatLng, radius)
                             }
                             Geofence.GEOFENCE_TRANSITION_EXIT -> {
-                                handleExitGeofence(employeeId, triggerTime)
+                                handleExitGeofence(context,email, triggerTime)
                             }
                         }
                     }
@@ -64,13 +62,12 @@ class GeofenceReceiver : BroadcastReceiver() {
                     Toast.makeText(context, "Error fetching geofence: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         } ?: run {
-            // Handle the case where geofencingEvent is null
+
         }
     }
 
-    private fun handleEnterGeofence(context: Context, employeeId: String, time: Date, geofenceLatLng: LatLng, geofenceRadius: Double) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            // Permission granted, proceed with getting the location
+    private fun handleEnterGeofence(context: Context, email: String, time: Date, geofenceLatLng: LatLng, geofenceRadius: Double) {
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
             fusedLocationClient.lastLocation
@@ -78,21 +75,19 @@ class GeofenceReceiver : BroadcastReceiver() {
                     if (location != null) {
                         val currentLocation = LatLng(location.latitude, location.longitude)
 
-                        // Check if the current location is inside the geofence
                         val distance = FloatArray(1)
-                        Location.distanceBetween(
+                        android.location.Location.distanceBetween(
                             location.latitude, location.longitude,
                             geofenceLatLng.latitude, geofenceLatLng.longitude,
                             distance
                         )
 
                         if (distance[0] <= geofenceRadius) {
-                            // Proceed with clock-in logic
                             val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                             if (currentHour < 12) {
-                                handleMorningArrival(employeeId, time)
+                                handleMorningArrival(context,email, time)
                             } else {
-                                handleAfternoonArrival(employeeId, time)
+                                handleAfternoonArrival(context,email, time)
                             }
                         } else {
                             Toast.makeText(context, "You must be inside the geofenced area to clock in.", Toast.LENGTH_SHORT).show()
@@ -103,31 +98,34 @@ class GeofenceReceiver : BroadcastReceiver() {
                     Toast.makeText(context, "Unable to get location.", Toast.LENGTH_SHORT).show()
                 }
         } else {
-            // Permission not granted, show a message or handle the case
             Toast.makeText(context, "Location permission is required to check your position.", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun handleExitGeofence(employeeId: String, time: Date) {
+    private fun handleExitGeofence(context: Context,email: String, time: Date) {
         val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
         if (currentHour < 12) {
-            // Morning Departure (Clock-out)
-            handleMorningDeparture(employeeId, time)
+            handleMorningDeparture(context,email, time)
         } else {
-            // Afternoon Departure (Clock-out)
-            handleAfternoonDeparture(employeeId, time)
+            handleAfternoonDeparture(context,email, time)
         }
     }
 
-    private fun handleMorningArrival(employeeId: String, time: Date) {
+    private fun handleMorningArrival(context: Context, email: String, time: Date) {
+        val currentDate = getCurrentDate()
+        val documentId = currentDate // Use the current date as the document ID
+
         db.collection("dtr_records")
-            .document("${employeeId}-${getCurrentDate()}")
+            .document(email) // Main document for the user (email as ID)
+            .collection("daily_records") // Subcollection for daily records
+            .document(documentId) // Document for the current date
             .get()
             .addOnSuccessListener { documentSnapshot ->
                 if (!documentSnapshot.exists()) {
+                    // Create a new record if it doesn't exist
                     val dtrRecord = DTRRecord(
-                        employeeId = employeeId,
+                        email = email,
                         date = time,
                         morningArrival = time,
                         morningDeparture = null,
@@ -136,76 +134,84 @@ class GeofenceReceiver : BroadcastReceiver() {
                     )
 
                     db.collection("dtr_records")
-                        .document("${employeeId}-${getCurrentDate()}")
+                        .document(email)
+                        .collection("daily_records")
+                        .document(documentId)
                         .set(dtrRecord)
                         .addOnSuccessListener {
-                            // Successfully saved morning arrival
+                            Toast.makeText(context, "Morning Arrival Recorded.", Toast.LENGTH_SHORT).show()
                         }
                         .addOnFailureListener {
-                            // Handle failure
+                            Toast.makeText(context, "Failed to record Morning Arrival.", Toast.LENGTH_SHORT).show()
                         }
+                } else {
+                    Toast.makeText(context, "Morning Arrival already recorded for today.", Toast.LENGTH_SHORT).show()
                 }
             }
             .addOnFailureListener {
-                // Handle failure in checking existing DTRRecord
+                Toast.makeText(context, "Error checking DTR record.", Toast.LENGTH_SHORT).show()
             }
     }
 
-    private fun handleMorningDeparture(employeeId: String, time: Date) {
+    private fun handleMorningDeparture(context: Context,email: String, time: Date) {
+        val currentDate = getCurrentDate()
+        val documentId = currentDate
+
         db.collection("dtr_records")
-            .whereEqualTo("employeeId", employeeId)
-            .whereEqualTo("date", getCurrentDate())
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                if (querySnapshot.documents.isNotEmpty()) {
-                    val document = querySnapshot.documents[0]
-                    document.reference.update("morningDeparture", time)
-                }
+            .document(email)
+            .collection("daily_records")
+            .document(documentId)
+            .update("morningDeparture", time)
+            .addOnSuccessListener {
+                Toast.makeText(context, "Morning Departure Recorded.", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener {
-                // Handle failure
+                Toast.makeText(context, "Failed to record Morning Departure.", Toast.LENGTH_SHORT).show()
             }
     }
 
-    private fun handleAfternoonArrival(employeeId: String, time: Date) {
+    private fun handleAfternoonArrival(context: Context,email: String, time: Date) {
+        val currentDate = getCurrentDate()
+        val documentId = currentDate
+
         db.collection("dtr_records")
-            .whereEqualTo("employeeId", employeeId)
-            .whereEqualTo("date", getCurrentDate())
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                if (querySnapshot.documents.isNotEmpty()) {
-                    val document = querySnapshot.documents[0]
-                    document.reference.update("afternoonArrival", time)
-                }
+            .document(email)
+            .collection("daily_records")
+            .document(documentId)
+            .update("afternoonArrival", time)
+            .addOnSuccessListener {
+                Toast.makeText(context, "Afternoon Arrival Recorded.", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener {
-                // Handle failure
+                Toast.makeText(context, "Failed to record Afternoon Arrival.", Toast.LENGTH_SHORT).show()
             }
     }
 
-    private fun handleAfternoonDeparture(employeeId: String, time: Date) {
+    private fun handleAfternoonDeparture(context: Context,email: String, time: Date) {
+        val currentDate = getCurrentDate()
+        val documentId = currentDate
+
         db.collection("dtr_records")
-            .whereEqualTo("employeeId", employeeId)
-            .whereEqualTo("date", getCurrentDate())
-            .get()
-            .addOnSuccessListener { querySnapshot ->
-                if (querySnapshot.documents.isNotEmpty()) {
-                    val document = querySnapshot.documents[0]
-                    document.reference.update("afternoonDeparture", time)
-                }
+            .document(email)
+            .collection("daily_records")
+            .document(documentId)
+            .update("afternoonDeparture", time)
+            .addOnSuccessListener {
+                Toast.makeText(context, "Afternoon Departure Recorded.", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener {
-                // Handle failure
+                Toast.makeText(context, "Failed to record Afternoon Departure.", Toast.LENGTH_SHORT).show()
             }
     }
+
 
     private fun getCurrentDate(): String {
         val calendar = Calendar.getInstance()
         return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.MONTH) + 1}-${calendar.get(Calendar.DAY_OF_MONTH)}"
     }
 
-    private fun getUserIdFromPreferences(context: Context): String {
-        val sharedPreferences: SharedPreferences = context.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-        return sharedPreferences.getString("employeeId", "") ?: ""
+    private fun getEmailFromFirebaseAuth(): String? {
+        return FirebaseAuth.getInstance().currentUser?.email
     }
 }
+

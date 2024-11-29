@@ -1,12 +1,12 @@
 package com.example.firebaseauth.activity
 
-
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import android.widget.TextView
 import android.view.View
 import com.example.firebaseauth.R
+
 
 
 class GeofenceAdapter(private val geofences: MutableList<String>) : RecyclerView.Adapter<GeofenceAdapter.GeofenceViewHolder>() {

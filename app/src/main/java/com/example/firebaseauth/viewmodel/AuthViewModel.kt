@@ -46,7 +46,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         checkAuthState()
     }
 
-    var UserModel = mutableStateOf(UserModel())
+    var userState = mutableStateOf(UserModel())
 
     private fun checkAuthState() {
         val user = auth.currentUser
@@ -64,12 +64,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
 
     fun updateUser(field: String, value: String) {
-        UserModel.value = when (field) {
-            "email" -> UserModel.value.copy(email = value)
-            "username" -> UserModel.value.copy(username = value)
-            "employeeId" -> UserModel.value.copy(employeeID = value)
+        userState.value = when (field) {
+            "email" -> userState.value.copy(email = value)
+            "username" -> userState.value.copy(username = value)
+            "employeeId" -> userState.value.copy(employeeID = value)
             else -> {
-                UserModel.value
+                userState.value
             }
         }
     }

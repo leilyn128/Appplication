@@ -121,26 +121,27 @@ fun LoginPage(
             )
 
             // Login Button
-
-            Button(onClick = {
-                if (email.isNotEmpty() && password.isNotEmpty()) {
-                    authViewModel.login(email, password, navController)
-                } else {
-                    Toast.makeText(context, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
-                }
-            }) {
+            Button(
+                onClick = {
+                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                        authViewModel.login(email, password, navController)
+                    } else {
+                        Toast.makeText(context, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth() // This makes the button as wide as the text fields
+            ) {
                 Text(text = "Login", fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
-
 
             // Signup Option
             Row(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Don't have an account?", fontSize = 16.sp)
+                Text(text = "Don't have an account?", fontSize = 20.sp)
                 TextButton(onClick = { navController.navigate("signup") }) {
-                    Text(text = "Signup", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "Signup", fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }

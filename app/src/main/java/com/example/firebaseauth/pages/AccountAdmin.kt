@@ -1,18 +1,11 @@
 package com.example.firebaseauth.pages
 
 
-
-
 import AuthViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.R
-//mport com.example.firebaseauth.viewmodel.AuthViewModel
+import com.example.firebaseauth.Screen
 
 @Composable
 fun AccountAdmin(
@@ -36,25 +29,17 @@ fun AccountAdmin(
     authViewModel: AuthViewModel = viewModel(),
     navController: NavController
 ) {
-    // Observe the authState
-    // val authState = authViewModel.authState.observeAsState()
     val authState = authViewModel.authState.observeAsState(AuthState.Unauthenticated)
 
-
-
-    // Watch for changes in the authState to navigate when the user logs out
     LaunchedEffect(authState.value) {
         if (authState.value is AuthState.Unauthenticated) {
-            // Navigate to login screen after successful logout
-            navController.navigate("login") {
-                // Clear the back stack so the user can't go back to the account page
-                popUpTo("login") { inclusive = true }
-                launchSingleTop = true // Prevent creating a new instance of the login page if already on it
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
+                launchSingleTop = true
             }
         }
     }
 
-    // Handle loading state if required
     val loading = authState.value is AuthState.Loading
     val user = (authState.value as? AuthState.Authenticated)?.user
 
@@ -66,22 +51,12 @@ fun AccountAdmin(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-
-            }
-
-            Text(
-                text = "Profile Details",
-                fontSize = 25.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-
-        }
+        Text(
+            text = "Profile Details",
+            fontSize = 25.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -96,15 +71,15 @@ fun AccountAdmin(
         if (loading) {
             Text("Loading...")
         } else if (user != null) {
-
+            // Profile details (Email, etc.)
             UserProfile(label = "Email:", value = user.email ?: "No email")
-
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Log Out button below the details
             Button(
                 onClick = {
-                    authViewModel.signOut( )
+                    authViewModel.signOut()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -120,6 +95,7 @@ fun AccountAdmin(
             }
         }
     }
+}
 
 @Composable
 fun UserProfile(label: String, value: String) {

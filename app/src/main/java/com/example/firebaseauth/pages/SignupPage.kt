@@ -53,7 +53,7 @@ fun SignupPage(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    val userModel = authViewModel.UserModel.value
+    val userModel = authViewModel.userState.value
     val context = LocalContext.current
 
     Column(
@@ -151,7 +151,7 @@ fun SignupPage(
                         employeeID = userModel.employeeID, // Keep only the relevant fields
                         onSignUpSuccess = {
                             Toast.makeText(context, "Sign-Up Successful", Toast.LENGTH_SHORT).show()
-                            navController.navigate("homepage") {
+                            navController.navigate("homePage") {
                                 popUpTo("signup") { inclusive = true }
                             }
                         },

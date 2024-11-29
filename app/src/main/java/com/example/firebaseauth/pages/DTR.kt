@@ -24,21 +24,28 @@ import androidx.compose.ui.unit.sp
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import android.location.Location
+import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.livedata.observeAsState
-import com.example.firebaseauth.activity.GeofenceUtils
-import com.example.firebaseauth.activity.isLocationPermissionGranted
+
 import com.example.firebaseauth.model.GeofenceData
+import com.example.yourapp.repository.GeofenceRepository
+import com.example.yourapp.utils.GeofenceUtils
 import com.google.android.gms.location.FusedLocationProviderClient
+
+
 
 
 @Composable
 fun DTR(
-    viewModel: DTRViewModel,  // Directly use the viewModel passed as parameter
-    employeeId: String,
+    viewModel: DTRViewModel,
+    email: String,
     fusedLocationClient: FusedLocationProviderClient,
 ) {
-    // Use the passed viewModel directly, no need to call viewModel() again
+
     val geofenceData by viewModel.geofenceData.observeAsState(GeofenceData(LatLng(0.0, 0.0), 0.0))
+    var currentLocation by remember { mutableStateOf<LatLng?>(null) }
 
     val geofenceCenter = geofenceData.center
     val geofenceLatitude = geofenceCenter.latitude
@@ -46,19 +53,26 @@ fun DTR(
     val geofenceRadius = geofenceData.radius
 
     val context = LocalContext.current
-    // You don't need to reinitialize fusedLocationClient here since it's already passed
-    // val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
-    val locationPermissionGranted = isLocationPermissionGranted(context)
-
-    val isInGeofence = remember { mutableStateOf(false) }
-    val message = remember { mutableStateOf("") }
 
     val dtrRecords = viewModel.dtrRecords.collectAsState().value
+    var showRecordsDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(employeeId) {
-        viewModel.fetchDTRRecords(employeeId)
+    LaunchedEffect(email) {
+        viewModel.fetchDTRRecords(email) // Fetch records using email
     }
+    LaunchedEffect(currentLocation) {
+        currentLocation?.let { latLng ->
+            val location = Location("").apply {
+                latitude = latLng.latitude
+                longitude = latLng.longitude
+            }
+
+        }
+    }
+
+
+
 
     Column(
         modifier = Modifier
@@ -66,7 +80,7 @@ fun DTR(
             .padding(16.dp)
     ) {
         // Keep the header fixed at the top
-        DTRCustomHeader()
+        DTRCustomHeader(onViewRecordsClick = { showRecordsDialog = true })
 
         Spacer(modifier = Modifier.height(8.dp)) // Add spacing below the header
 
@@ -74,7 +88,7 @@ fun DTR(
         Box(
             modifier = Modifier
                 .fillMaxSize(),
-            contentAlignment = Alignment.Center // Center the content within the remaining space
+            contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,17 +108,22 @@ fun DTR(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ClockInButton(employeeId, geofenceLatitude, geofenceLongitude, geofenceRadius, fusedLocationClient)
-                    ClockOutButton(employeeId, geofenceLatitude, geofenceLongitude, geofenceRadius, fusedLocationClient)
+                    ClockInButton(email,fusedLocationClient )
+                    ClockOutButton(email,fusedLocationClient)
                 }
             }
         }
     }
+    if (showRecordsDialog) {
+        RecordsDialog(
+            records = dtrRecords,
+            onDismiss = { showRecordsDialog = false }
+        )
+    }
+
 }
-
-
 @Composable
-fun DTRCustomHeader() {
+fun DTRCustomHeader(onViewRecordsClick: () -> Unit) {
     val customGreen = Color(0xFF5F8C60) // Define the custom green color
 
     Box(
@@ -130,6 +149,21 @@ fun DTRCustomHeader() {
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.align(Alignment.Center)
         )
+
+        // "View Records" IconButton at the top-right
+        IconButton(
+            onClick = onViewRecordsClick,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp)
+        ) {
+
+            Icon(
+                imageVector = Icons.Default.List, // You can replace this with your own icon
+                contentDescription = "View Records",
+                tint = Color.White // Apply the custom green color to the icon
+            )
+        }
     }
 }
 
@@ -176,175 +210,195 @@ fun DTRCard(record: DTRRecord) {
         }
     }
 }
-
 @Composable
 fun ClockInButton(
-    employeeId: String,
-    geofenceLatitude: Double,
-    geofenceLongitude: Double,
-    geofenceRadius: Double,
+    email: String,
     fusedLocationClient: FusedLocationProviderClient
 ) {
     val context = LocalContext.current
 
+    // Button for clock-in
     Button(
         onClick = {
-            // Validate geofence access first
-            GeofenceUtils.validateGeofenceAccess(
-                fusedLocationClient,
-                geofenceLatitude,
-                geofenceLongitude,
-                geofenceRadius,
-                context,
-                onSuccess = {
-                    // Proceed with clocking in
-                    val currentTime = Calendar.getInstance().time
-                    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            // Fetch geofence data set by the admin
+            GeofenceRepository.fetchGeofenceData(
+                onSuccess = { latitude, longitude, radius ->
+                    // Validate if the employee is within the geofence
+                    GeofenceUtils.validateGeofenceAccess(
+                        fusedLocationClient,
+                        latitude,
+                        longitude,
+                        radius,
+                        context,
+                        onSuccess = {
+                            // Proceed with clocking in
+                            val currentTime = Calendar.getInstance().time
+                            val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
-                    val db = FirebaseFirestore.getInstance()
-                    val recordId = "${employeeId}-${getCurrentDate()}"
+                            val db = FirebaseFirestore.getInstance()
+                            val recordId = "${email}-${getCurrentDate()}" // Use email in recordId
 
-                    db.collection("dtr_records")
-                        .document(recordId)
-                        .get()
-                        .addOnSuccessListener { documentSnapshot ->
-                            if (documentSnapshot.exists()) {
-                                val morningArrival = documentSnapshot.getDate("morningArrival")
-                                val afternoonArrival = documentSnapshot.getDate("afternoonArrival")
+                            db.collection("dtr_records")
+                                .document(recordId)
+                                .get()
+                                .addOnSuccessListener { documentSnapshot ->
+                                    if (documentSnapshot.exists()) {
+                                        val morningArrival = documentSnapshot.getDate("morningArrival")
+                                        val afternoonArrival = documentSnapshot.getDate("afternoonArrival")
 
-                                if (currentHour < 12) {
-                                    if (morningArrival != null) {
-                                        Toast.makeText(context, "You have already clocked in for the morning.", Toast.LENGTH_SHORT).show()
+                                        if (currentHour < 12) {
+                                            if (morningArrival != null) {
+                                                Toast.makeText(context, "You have already clocked in for the morning.", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                handleMorningArrival(email, currentTime)
+                                                Toast.makeText(context, "Morning clock-in successful!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            if (afternoonArrival != null) {
+                                                Toast.makeText(context, "You have already clocked in for the afternoon.", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                handleAfternoonArrival(email, currentTime)
+                                                Toast.makeText(context, "Afternoon clock-in successful!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
                                     } else {
-                                        handleMorningArrival(employeeId, currentTime)
-                                        Toast.makeText(context, "Morning clock-in successful!", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    if (afternoonArrival != null) {
-                                        Toast.makeText(context, "You have already clocked in for the afternoon.", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        handleAfternoonArrival(employeeId, currentTime)
-                                        Toast.makeText(context, "Afternoon clock-in successful!", Toast.LENGTH_SHORT).show()
+                                        // No existing record for today, create a new one based on the time
+                                        if (currentHour < 12) {
+                                            handleMorningArrival(email, currentTime)
+                                            Toast.makeText(context, "Morning clock-in successful!", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            handleAfternoonArrival(email, currentTime)
+                                            Toast.makeText(context, "Afternoon clock-in successful!", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
-                            } else {
-                                // No record exists, allow the first clock-in
-                                if (currentHour < 12) {
-                                    handleMorningArrival(employeeId, currentTime)
-                                    Toast.makeText(context, "Morning clock-in successful!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    handleAfternoonArrival(employeeId, currentTime)
-                                    Toast.makeText(context, "Afternoon clock-in successful!", Toast.LENGTH_SHORT).show()
+                                .addOnFailureListener { exception ->
+                                    Toast.makeText(context, "Error checking DTR record: ${exception.message}", Toast.LENGTH_SHORT).show()
                                 }
-                            }
+                        },
+                        onFailure = { errorMessage ->
+                            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
                         }
-                        .addOnFailureListener { exception ->
-                            Toast.makeText(context, "Error checking DTR record: ${exception.message}", Toast.LENGTH_SHORT).show()
-                        }
+                    )
                 },
-                onFailure = { errorMessage ->
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                onFailure = { error ->
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                 }
             )
         },
         modifier = Modifier
             .height(50.dp)
-            .width(150.dp) // Button size adjustment
+            .width(150.dp)
     ) {
         Text(text = "Clock In")
     }
 }
-
 @Composable
 fun ClockOutButton(
-    employeeId: String,
-    geofenceLatitude: Double,
-    geofenceLongitude: Double,
-    geofenceRadius: Double,
+    email: String, // Use email instead of employeeId
     fusedLocationClient: FusedLocationProviderClient
 ) {
     val context = LocalContext.current
+    val currentTime = Calendar.getInstance().time
+    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 
     Button(
         onClick = {
-            // Validate geofence access first
-            GeofenceUtils.validateGeofenceAccess(
-                fusedLocationClient,
-                geofenceLatitude,
-                geofenceLongitude,
-                geofenceRadius,
-                context,
-                onSuccess = {
-                    // Proceed with clocking out
-                    val currentTime = Calendar.getInstance().time
-                    val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            // Fetch geofence data set by the admin
+            GeofenceRepository.fetchGeofenceData(
+                onSuccess = { latitude, longitude, radius ->
+                    // Validate if the employee is within the geofence
+                    GeofenceUtils.validateGeofenceAccess(
+                        fusedLocationClient,
+                        latitude,
+                        longitude,
+                        radius,
+                        context,
+                        onSuccess = {
+                            // Proceed with clocking out
+                            val db = FirebaseFirestore.getInstance()
+                            val recordId = "${email}-${getCurrentDate()}" // Use email in recordId
 
-                    val db = FirebaseFirestore.getInstance()
-                    val recordId = "${employeeId}-${getCurrentDate()}"
+                            // Get DTR record for today
+                            db.collection("dtr_records")
+                                .document(recordId)
+                                .get()
+                                .addOnSuccessListener { documentSnapshot ->
+                                    if (documentSnapshot.exists()) {
+                                        // Extract existing clock-in/out times
+                                        val morningArrival = documentSnapshot.getDate("morningArrival")
+                                        val afternoonArrival = documentSnapshot.getDate("afternoonArrival")
+                                        val morningDeparture = documentSnapshot.getDate("morningDeparture")
+                                        val afternoonDeparture = documentSnapshot.getDate("afternoonDeparture")
 
-                    db.collection("dtr_records")
-                        .document(recordId)
-                        .get()
-                        .addOnSuccessListener { documentSnapshot ->
-                            if (documentSnapshot.exists()) {
-                                val morningArrival = documentSnapshot.getDate("morningArrival")
-                                val afternoonArrival = documentSnapshot.getDate("afternoonArrival")
-                                val morningDeparture = documentSnapshot.getDate("morningDeparture")
-                                val afternoonDeparture = documentSnapshot.getDate("afternoonDeparture")
-
-                                if (currentHour < 12) {
-                                    // Morning clock-out logic
-                                    if (morningArrival == null) {
-                                        Toast.makeText(context, "You must clock in for the morning first.", Toast.LENGTH_SHORT).show()
-                                    } else if (morningDeparture != null) {
-                                        Toast.makeText(context, "You have already clocked out for the morning.", Toast.LENGTH_SHORT).show()
+                                        // Handle clock-out logic based on time of day
+                                        if (currentHour < 12) {
+                                            // Morning shift
+                                            when {
+                                                morningArrival == null -> {
+                                                    Toast.makeText(context, "You must clock in for the morning first.", Toast.LENGTH_SHORT).show()
+                                                }
+                                                morningDeparture != null -> {
+                                                    Toast.makeText(context, "You have already clocked out for the morning.", Toast.LENGTH_SHORT).show()
+                                                }
+                                                else -> {
+                                                    handleMorningDeparture(email, currentTime)
+                                                    Toast.makeText(context, "Morning clock-out successful!", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        } else {
+                                            // Afternoon shift
+                                            when {
+                                                afternoonArrival == null -> {
+                                                    Toast.makeText(context, "You must clock in for the afternoon first.", Toast.LENGTH_SHORT).show()
+                                                }
+                                                afternoonDeparture != null -> {
+                                                    Toast.makeText(context, "You have already clocked out for the afternoon.", Toast.LENGTH_SHORT).show()
+                                                }
+                                                else -> {
+                                                    handleAfternoonDeparture(email, currentTime)
+                                                    Toast.makeText(context, "Afternoon clock-out successful!", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
                                     } else {
-                                        handleMorningDeparture(employeeId, currentTime)
-                                        Toast.makeText(context, "Morning clock-out successful!", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    // Afternoon clock-out logic
-                                    if (afternoonArrival == null) {
-                                        Toast.makeText(context, "You must clock in for the afternoon first.", Toast.LENGTH_SHORT).show()
-                                    } else if (afternoonDeparture != null) {
-                                        Toast.makeText(context, "You have already clocked out for the afternoon.", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        handleAfternoonDeparture(employeeId, currentTime)
-                                        Toast.makeText(context, "Afternoon clock-out successful!", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "No clock-in record found for today. Please clock in first.", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            } else {
-                                Toast.makeText(context, "No clock-in record found for today. Please clock in first.", Toast.LENGTH_SHORT).show()
-                            }
+                                .addOnFailureListener { exception ->
+                                    Toast.makeText(context, "Error checking DTR record: ${exception.message}", Toast.LENGTH_SHORT).show()
+                                }
+                        },
+                        onFailure = { errorMessage ->
+                            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
                         }
-                        .addOnFailureListener { exception ->
-                            Toast.makeText(context, "Error checking DTR record: ${exception.message}", Toast.LENGTH_SHORT).show()
-                        }
+                    )
                 },
-                onFailure = { errorMessage ->
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                onFailure = { error ->
+                    Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                 }
             )
         },
         modifier = Modifier
             .height(50.dp)
-            .width(150.dp) // Button size adjustment
+            .width(150.dp)
     ) {
         Text(text = "Clock Out")
     }
 }
 
-private fun handleMorningArrival(employeeId: String, time: Date) {
+
+private fun handleMorningArrival(email: String, time: Date) {
     val db = FirebaseFirestore.getInstance()
 
     db.collection("dtr_records")
-        .document("${employeeId}-${getCurrentDate()}")
+        .document("${email}-${getCurrentDate()}")
         .get()
         .addOnSuccessListener { documentSnapshot ->
             if (!documentSnapshot.exists()) {
                 // Create a new record if it doesn't exist
                 val dtrRecord = DTRRecord(
-                    employeeId = employeeId,
+                    email = email,
                     date = time,
                     morningArrival = time, // Set morning arrival time
                     morningDeparture = null,
@@ -353,43 +407,44 @@ private fun handleMorningArrival(employeeId: String, time: Date) {
                 )
 
                 db.collection("dtr_records")
-                    .document("${employeeId}-${getCurrentDate()}")
+                    .document("${email}-${getCurrentDate()}")
                     .set(dtrRecord)
                     .addOnSuccessListener {
-                        Log.d("DTR", "Morning arrival saved successfully for $employeeId on ${getCurrentDate()}")
+                        Log.d("DTR", "Morning arrival saved successfully for $email on ${getCurrentDate()}")
                     }
                     .addOnFailureListener { exception ->
-                        Log.e("DTR", "Error saving morning arrival for $employeeId: ${exception.message}")
+                        Log.e("DTR", "Error saving morning arrival for $email: ${exception.message}")
                     }
             } else {
                 // If record exists, log it
-                Log.d("DTR", "DTR record already exists for $employeeId on ${getCurrentDate()}")
+                Log.d("DTR", "DTR record already exists for $email on ${getCurrentDate()}")
             }
         }
         .addOnFailureListener { exception ->
-            Log.e("DTR", "Error fetching DTR record for $employeeId: ${exception.message}")
+            Log.e("DTR", "Error fetching DTR record for $email: ${exception.message}")
         }
 }
-private fun handleMorningDeparture(employeeId: String, time: Date) {
+
+private fun handleMorningDeparture(email: String, time: Date) {
     val db = FirebaseFirestore.getInstance()
 
     db.collection("dtr_records")
-        .document("${employeeId}-${getCurrentDate()}")
+        .document("${email}-${getCurrentDate()}")
         .get()
         .addOnSuccessListener { documentSnapshot ->
             if (documentSnapshot.exists()) {
                 // Update the morningDeparture field
                 db.collection("dtr_records")
-                    .document("${employeeId}-${getCurrentDate()}")
+                    .document("${email}-${getCurrentDate()}")
                     .update("morningDeparture", time)
                     .addOnSuccessListener {
-                        Log.d("DTR", "Morning departure updated successfully for $employeeId on ${getCurrentDate()}")
+                        Log.d("DTR", "Morning departure updated successfully for $email on ${getCurrentDate()}")
                     }
                     .addOnFailureListener { exception ->
                         Log.e("DTR", "Error updating morning departure: ${exception.message}")
                     }
             } else {
-                Log.e("DTR", "No DTR record found for $employeeId to update morning departure.")
+                Log.e("DTR", "No DTR record found for $email to update morning departure.")
             }
         }
         .addOnFailureListener { exception ->
@@ -397,19 +452,17 @@ private fun handleMorningDeparture(employeeId: String, time: Date) {
         }
 }
 
-
-
-private fun handleAfternoonArrival(employeeId: String, time: Date) {
+private fun handleAfternoonArrival(email: String, time: Date) {
     val db = FirebaseFirestore.getInstance()
 
     db.collection("dtr_records")
-        .document("${employeeId}-${getCurrentDate()}")
+        .document("${email}-${getCurrentDate()}")
         .get()
         .addOnSuccessListener { documentSnapshot ->
             if (!documentSnapshot.exists()) {
                 // Create a new record if it doesn't exist
                 val dtrRecord = DTRRecord(
-                    employeeId = employeeId,
+                    email = email,
                     date = time,
                     morningArrival = null, // Morning arrival remains null
                     morningDeparture = null,
@@ -418,52 +471,52 @@ private fun handleAfternoonArrival(employeeId: String, time: Date) {
                 )
 
                 db.collection("dtr_records")
-                    .document("${employeeId}-${getCurrentDate()}")
+                    .document("${email}-${getCurrentDate()}")
                     .set(dtrRecord)
                     .addOnSuccessListener {
-                        Log.d("DTR", "Afternoon arrival saved successfully for $employeeId on ${getCurrentDate()}")
+                        Log.d("DTR", "Afternoon arrival saved successfully for $email on ${getCurrentDate()}")
                     }
                     .addOnFailureListener { exception ->
-                        Log.e("DTR", "Error saving afternoon arrival for $employeeId: ${exception.message}")
+                        Log.e("DTR", "Error saving afternoon arrival for $email: ${exception.message}")
                     }
             } else {
                 // If record exists, update the afternoon arrival
                 db.collection("dtr_records")
-                    .document("${employeeId}-${getCurrentDate()}")
+                    .document("${email}-${getCurrentDate()}")
                     .update("afternoonArrival", time)
                     .addOnSuccessListener {
-                        Log.d("DTR", "Afternoon arrival updated for $employeeId on ${getCurrentDate()}")
+                        Log.d("DTR", "Afternoon arrival updated for $email on ${getCurrentDate()}")
                     }
                     .addOnFailureListener { exception ->
-                        Log.e("DTR", "Error updating afternoon arrival for $employeeId: ${exception.message}")
+                        Log.e("DTR", "Error updating afternoon arrival for $email: ${exception.message}")
                     }
             }
         }
         .addOnFailureListener { exception ->
-            Log.e("DTR", "Error fetching DTR record for $employeeId: ${exception.message}")
+            Log.e("DTR", "Error fetching DTR record for $email: ${exception.message}")
         }
 }
 
-private fun handleAfternoonDeparture(employeeId: String, time: Date) {
+private fun handleAfternoonDeparture(email: String, time: Date) {
     val db = FirebaseFirestore.getInstance()
 
     db.collection("dtr_records")
-        .document("${employeeId}-${getCurrentDate()}")
+        .document("${email}-${getCurrentDate()}")
         .get()
         .addOnSuccessListener { documentSnapshot ->
             if (documentSnapshot.exists()) {
                 // Update the afternoonDeparture field
                 db.collection("dtr_records")
-                    .document("${employeeId}-${getCurrentDate()}")
+                    .document("${email}-${getCurrentDate()}")
                     .update("afternoonDeparture", time)
                     .addOnSuccessListener {
-                        Log.d("DTR", "Afternoon departure updated successfully for $employeeId on ${getCurrentDate()}")
+                        Log.d("DTR", "Afternoon departure updated successfully for $email on ${getCurrentDate()}")
                     }
                     .addOnFailureListener { exception ->
                         Log.e("DTR", "Error updating afternoon departure: ${exception.message}")
                     }
             } else {
-                Log.e("DTR", "No DTR record found for $employeeId to update afternoon departure.")
+                Log.e("DTR", "No DTR record found for $email to update afternoon departure.")
             }
         }
         .addOnFailureListener { exception ->
@@ -472,8 +525,56 @@ private fun handleAfternoonDeparture(employeeId: String, time: Date) {
 }
 
 
-
 private fun getCurrentDate(): String {
     val calendar = Calendar.getInstance()
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.MONTH) + 1}-${calendar.get(Calendar.DAY_OF_MONTH)}"
+}
+@Composable
+fun RecordsDialog(records: List<DTRRecord>, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "DTR Records",
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (records.isEmpty()) {
+                    Text("No records available.", style = MaterialTheme.typography.bodyLarge)
+                } else {
+                    records.forEach { record ->
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val arrivalTime = record.morningArrival?.let {
+                            SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
+                        } ?: "N/A"
+                        val morningDepartureTime = record.morningDeparture?.let {
+                            SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
+                        } ?: "N/A"
+                        val afternoonArrivalTime = record.afternoonArrival?.let {
+                            SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
+                        } ?: "N/A"
+                        val afternoonDepartureTime = record.afternoonDeparture?.let {
+                            SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
+                        } ?: "N/A"
+
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                            Text("Date: ${dateFormat.format(record.date)}")
+                            Text("Morning Arrival: $arrivalTime")
+                            Text("Morning Departure: $morningDepartureTime")
+                            Text("Afternoon Arrival: $afternoonArrivalTime")
+                            Text("Afternoon Departure: $afternoonDepartureTime")
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }

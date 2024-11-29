@@ -18,9 +18,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.ui.theme.NavItem
+import com.example.googlemappage.MapPage
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.auth.FirebaseAuth
 
 
 @Composable
@@ -33,7 +35,6 @@ fun HomePage(
     val authState by authViewModel.authState.observeAsState()
     val dtrViewModel: DTRViewModel = viewModel()
 
-    // Retrieve user role from authViewModel
     val userRole = authViewModel.userDetails.value?.role ?: "employee"
 
     var selectedIndex by remember { mutableStateOf(0) }
@@ -100,31 +101,35 @@ fun ContentScreen(
     authViewModel: AuthViewModel,
     navController: NavController,
     currentLocation: LatLng?,
-    dtrViewModel: DTRViewModel,  // Ensure the ViewModel is passed correctly
-    userRole: String // Add userRole parameter
+    dtrViewModel: DTRViewModel,
+    userRole: String
 ) {
-    val context = LocalContext.current // Get context
-
-    // Initialize FusedLocationProviderClient
+    val context = LocalContext.current //
     val fusedLocationClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
+
+
+    val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email
 
     when (selectedIndex) {
         0 -> {
-            // Display the map page
+
             MapPage(modifier = modifier)
         }
 
         1 -> {
-            // Display the DTR page
-            DTR(
-                viewModel = dtrViewModel,  // Pass the viewModel as expected by DTR composable
-                employeeId = "someEmployeeId",  // Pass employeeId
-                fusedLocationClient = fusedLocationClient  // Pass fusedLocationClient
-            )
+            currentUserEmail?.let { email ->
+                DTR(
+                    viewModel = dtrViewModel,
+                    email = email,
+                    fusedLocationClient = fusedLocationClient
+                )
+            } ?: run {
+                Log.e("ContentScreen", "No logged-in user's email found.")
+            }
         }
 
         2 -> {
-            // Display the account page
+
             Account(
                 modifier = modifier,
                 authViewModel = authViewModel,
@@ -133,10 +138,7 @@ fun ContentScreen(
         }
 
         3 -> {
-            // Handle other screens
+
         }
     }
 }
-
-
-

@@ -5,12 +5,7 @@ import AuthViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.R
+import com.example.firebaseauth.Screen
 import com.example.firebaseauth.model.ProfileViewModel
 
 
@@ -40,8 +36,8 @@ fun Account(
     LaunchedEffect(authState.value) {
         if (authState.value is AuthState.Unauthenticated) {
             // Navigate to login screen after successful logout
-            navController.navigate("login") {
-                popUpTo("login") { inclusive = true }
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Login.route) { inclusive = true }
                 launchSingleTop = true // Prevent creating a new instance of the login page if already on it
             }
         }
@@ -75,7 +71,6 @@ fun Account(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Check if userProfile is not null and display it
         if (userProfile != null) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 UserProfile(label = "ID Number:", value = userProfile.employeeID)
@@ -83,7 +78,7 @@ fun Account(
                 UserProfile(label = "Email:", value = userProfile.email)
             }
         } else {
-            Text("Loading...", color = Color.White) // Show loading text while profile data is being loaded
+            Text("Loading...", color = Color.White)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -91,10 +86,10 @@ fun Account(
         // Log Out Button
         Button(
             onClick = {
-                authViewModel.signOut() // Call signout method
+                authViewModel.signOut()
             },
             modifier = Modifier
-                .fillMaxWidth(0.9f) // Slightly reduce the width for a more centered button
+                .fillMaxWidth(0.9f)
                 .padding(bottom = 16.dp)
         ) {
             Text(

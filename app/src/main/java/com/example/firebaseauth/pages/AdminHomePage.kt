@@ -60,7 +60,7 @@ fun AdminHomePage(
                 )
             }
             1 -> {
-                // Admin DTR Record Page
+
                 DTRRecordPage(
                     modifier = Modifier.padding(innerPadding) // Apply padding here
                 )

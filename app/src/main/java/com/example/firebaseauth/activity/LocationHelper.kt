@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import androidx.core.app.ActivityCompat
+import com.example.firebaseauth.model.GeofenceData
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.location.LocationRequest
@@ -18,11 +19,10 @@ private val onLocationUpdate: (LatLng) -> Unit
 ) {
     private val fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
 
-    // LocationRequest initialization
     private val locationRequest = LocationRequest.Builder(
         Priority.PRIORITY_HIGH_ACCURACY, 5000L
-    ).setMinUpdateIntervalMillis(2000L)  // Update frequency every 2 seconds
-        .setPriority(Priority.PRIORITY_HIGH_ACCURACY)  // High accuracy
+    ).setMinUpdateIntervalMillis(2000L)
+        .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
         .build()
 
     private val locationCallback = object : LocationCallback() {
@@ -36,9 +36,9 @@ private val onLocationUpdate: (LatLng) -> Unit
     }
 
 
-    // Starts location updates (without permission handling)
+
     fun startLocationUpdates(){
-        // Start location updates only if permission is granted
+
         if (ActivityCompat.checkSelfPermission(
                 context, Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED) {
@@ -47,7 +47,7 @@ private val onLocationUpdate: (LatLng) -> Unit
             )
         }
     }
-    // Stops location updates
+
     fun stopLocationUpdates() {
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
     }

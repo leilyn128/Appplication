@@ -1,4 +1,3 @@
-
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -6,16 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.firebaseauth.model.DTRRecord
 import com.example.firebaseauth.model.GeofenceData
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import java.util.Date
 
 import com.google.android.gms.maps.model.LatLng
-
 
 class DTRViewModel : ViewModel() {
 
@@ -25,12 +21,13 @@ class DTRViewModel : ViewModel() {
     private val _dtrRecords = MutableStateFlow<List<DTRRecord>>(emptyList())
     val dtrRecords: StateFlow<List<DTRRecord>> get() = _dtrRecords
 
-    fun fetchDTRRecords(employeeId: String) {
-        // Fetch DTR records from Firestorm for the logged-in employee
+    // Fetch DTR records using the logged-in user's email
+    fun fetchDTRRecords(email: String) {
+        // Fetch DTR records from Firestore for the logged-in employee using email
         viewModelScope.launch {
             try {
                 val snapshot = db.collection("dtr_records")
-                    .whereEqualTo("employeeId", employeeId)
+                    .whereEqualTo("email", email)  // Use email instead of employeeId
                     .get()
                     .await()
 
@@ -42,7 +39,7 @@ class DTRViewModel : ViewModel() {
                     val afternoonDeparture = doc.getDate("afternoonDeparture")
 
                     DTRRecord(
-                        employeeId = employeeId,
+                        email = email,
                         date = date,
                         morningArrival = morningArrival,
                         morningDeparture = morningDeparture,
@@ -52,7 +49,6 @@ class DTRViewModel : ViewModel() {
                 }
                 _dtrRecords.value = records
             } catch (e: Exception) {
-                // Handle errors
             }
         }
     }
