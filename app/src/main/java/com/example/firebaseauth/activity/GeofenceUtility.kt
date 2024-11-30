@@ -1,8 +1,8 @@
-package com.example.firebaseauth.repository
+package com.example.firebaseauth.activity
 
 import com.google.firebase.firestore.FirebaseFirestore
 
-object GeofenceRepository {
+object GeofenceUtility {
 
     fun fetchGeofenceData(
         onSuccess: (latitude: Double, longitude: Double, radius: Double) -> Unit,

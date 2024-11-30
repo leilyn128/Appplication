@@ -29,9 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.text.font.FontWeight
-
+import com.example.firebaseauth.activity.GeofenceUtility
 import com.example.firebaseauth.model.GeofenceData
-import com.example.firebaseauth.repository.GeofenceRepository
 import com.example.firebaseauth.activity.GeofenceUtils
 import com.google.android.gms.location.FusedLocationProviderClient
 
@@ -231,7 +230,7 @@ fun ClockInButton(
     Button(
         onClick = {
             // Fetch geofence data set by the admin
-            GeofenceRepository.fetchGeofenceData(
+            GeofenceUtility.fetchGeofenceData(
                 onSuccess = { latitude, longitude, radius ->
                     // Validate if the employee is within the geofence
                     GeofenceUtils.validateGeofenceAccess(
@@ -315,7 +314,7 @@ fun ClockOutButton(
     Button(
         onClick = {
             // Fetch geofence data set by the admin
-            GeofenceRepository.fetchGeofenceData(
+            GeofenceUtility.fetchGeofenceData(
                 onSuccess = { latitude, longitude, radius ->
                     // Validate if the employee is within the geofence
                     GeofenceUtils.validateGeofenceAccess(
