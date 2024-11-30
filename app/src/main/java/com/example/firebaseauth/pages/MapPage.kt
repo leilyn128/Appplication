@@ -119,6 +119,7 @@ fun MapPage(
                 Marker(
                     state = MarkerState(position = currentLocation!!),
                     title = "Current Location"
+
                 )
 
                 // Geofence Marker
@@ -137,6 +138,7 @@ fun MapPage(
                 )
 
             }
+
 
 
         } else {

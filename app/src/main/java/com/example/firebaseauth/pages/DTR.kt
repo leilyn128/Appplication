@@ -28,10 +28,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.text.font.FontWeight
 
 import com.example.firebaseauth.model.GeofenceData
-import com.example.yourapp.repository.GeofenceRepository
-import com.example.yourapp.utils.GeofenceUtils
+import com.example.firebaseauth.repository.GeofenceRepository
+import com.example.firebaseauth.activity.GeofenceUtils
 import com.google.android.gms.location.FusedLocationProviderClient
 
 
@@ -85,6 +86,7 @@ fun DTR(
         Spacer(modifier = Modifier.height(8.dp)) // Add spacing below the header
 
         // Main content centered
+        // Inside your composable
         Box(
             modifier = Modifier
                 .fillMaxSize(),
@@ -94,11 +96,19 @@ fun DTR(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                if (dtrRecords.isEmpty()) {
-                    Text("No records found.", style = MaterialTheme.typography.bodyLarge)
+                // Get today's date
+                val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+                // Find today's record in dtrRecords
+                val todaysRecord = dtrRecords.find { record ->
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(record.date) == today
+                }
+
+                if (todaysRecord == null) {
+                    Text("No records found for today.", style = MaterialTheme.typography.bodyLarge)
                 } else {
-                    // Show the first DTR record only for now
-                    DTRCard(record = dtrRecords.first())
+                    // Show today's DTR record
+                    DTRCard(record = todaysRecord)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp)) // Add spacing between the card and buttons
@@ -108,13 +118,13 @@ fun DTR(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ClockInButton(email,fusedLocationClient )
-                    ClockOutButton(email,fusedLocationClient)
+                    ClockInButton(email, fusedLocationClient)
+                    ClockOutButton(email, fusedLocationClient)
                 }
             }
         }
     }
-    if (showRecordsDialog) {
+        if (showRecordsDialog) {
         RecordsDialog(
             records = dtrRecords,
             onDismiss = { showRecordsDialog = false }
@@ -170,10 +180,10 @@ fun DTRCustomHeader(onViewRecordsClick: () -> Unit) {
 @Composable
 fun DTRCard(record: DTRRecord) {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    val arrivalTime = record.morningArrival?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "N/A"
-    val morningDepartureTime = record.morningDeparture?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "N/A"
-    val afternoonArrivalTime = record.afternoonArrival?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "N/A"
-    val afternoonDepartureTime = record.afternoonDeparture?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "N/A"
+    val arrivalTime = record.morningArrival?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "____"
+    val morningDepartureTime = record.morningDeparture?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "____"
+    val afternoonArrivalTime = record.afternoonArrival?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "____"
+    val afternoonDepartureTime = record.afternoonDeparture?.let { SimpleDateFormat("HH:mm", Locale.getDefault()).format(it) } ?: "____"
 
     Card(
         modifier = Modifier
@@ -529,6 +539,10 @@ private fun getCurrentDate(): String {
     val calendar = Calendar.getInstance()
     return "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.MONTH) + 1}-${calendar.get(Calendar.DAY_OF_MONTH)}"
 }
+
+
+
+
 @Composable
 fun RecordsDialog(records: List<DTRRecord>, onDismiss: () -> Unit) {
     AlertDialog(
@@ -548,23 +562,48 @@ fun RecordsDialog(records: List<DTRRecord>, onDismiss: () -> Unit) {
                         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                         val arrivalTime = record.morningArrival?.let {
                             SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
-                        } ?: "N/A"
+                        } ?: "____"
                         val morningDepartureTime = record.morningDeparture?.let {
                             SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
-                        } ?: "N/A"
+                        } ?: "____"
                         val afternoonArrivalTime = record.afternoonArrival?.let {
                             SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
-                        } ?: "N/A"
+                        } ?: "____"
                         val afternoonDepartureTime = record.afternoonDeparture?.let {
                             SimpleDateFormat("HH:mm", Locale.getDefault()).format(it)
-                        } ?: "N/A"
+                        } ?: "____"
 
                         Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                            Text("Date: ${dateFormat.format(record.date)}")
-                            Text("Morning Arrival: $arrivalTime")
-                            Text("Morning Departure: $morningDepartureTime")
-                            Text("Afternoon Arrival: $afternoonArrivalTime")
-                            Text("Afternoon Departure: $afternoonDepartureTime")
+                            // Date Row
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("Date: ${dateFormat.format(record.date)}", modifier = Modifier.weight(1f))
+                            }
+
+                            // AM Section
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Text("AM", modifier = Modifier.weight(1f), style = TextStyle(fontWeight = FontWeight.Bold))
+                                Spacer(modifier = Modifier.weight(1f)) // Push PM label to the right
+                                Text("PM", modifier = Modifier.weight(1f), style = TextStyle(fontWeight = FontWeight.Bold))
+                            }
+
+                            // AM IN/OUT and PM IN/OUT Row
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                // AM Times (IN/OUT)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("IN: $arrivalTime")
+                                    Text("OUT: $morningDepartureTime")
+                                }
+
+                                // Spacer to align PM section to the right
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                // PM Times (IN/OUT)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("IN: $afternoonArrivalTime")
+                                    Text("OUT: $afternoonDepartureTime")
+                                }
+                            }
+
                             Divider(modifier = Modifier.padding(vertical = 8.dp))
                         }
                     }

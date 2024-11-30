@@ -108,7 +108,11 @@ dependencies {
     implementation("com.google.firebase:firebase-storage:20.2.0")
     implementation ("com.google.mlkit:face-detection:16.1.3")
 
+    implementation ("com.google.firebase:firebase-auth:21.0.5" )
+    implementation ("com.google.firebase:firebase-firestore:24.4.3")// For Firestore
+    }
 
 
 
-}
+
+

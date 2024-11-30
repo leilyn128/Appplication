@@ -22,7 +22,7 @@ import androidx.navigation.NavController
 import com.example.firebaseauth.viewmodel.AuthState
 import com.example.firebaseauth.R
 import com.example.firebaseauth.Screen
-import com.example.firebaseauth.model.ProfileViewModel
+import com.example.firebaseauth.viewmodel.ProfileViewModel
 
 
 @Composable

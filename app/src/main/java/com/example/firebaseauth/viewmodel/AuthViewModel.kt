@@ -1,4 +1,6 @@
 import android.app.Application
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -11,6 +13,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import androidx.compose.runtime.State
 import androidx.navigation.NavController
+import com.example.firebaseauth.Screen
 
 //import com.example.firebaseauth.login.AccountType
 //import com.google.android.gms.common.internal.AccountType
@@ -74,42 +77,62 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     fun login(email: String?, password: String?, navController: NavController) {
         if (email.isNullOrBlank() || password.isNullOrBlank()) {
+            Log.e("AuthViewModel", "Email or password is blank.")
             return
         }
+
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val userEmail = auth.currentUser?.email ?: ""
                     val role = assignRoleBasedOnEmail(userEmail)
-                    _authState.value = AuthState.LoggedIn(userEmail, role)
+
+                    // Update authState to reflect authenticated state
+                    _authState.value = AuthState.Authenticated(auth.currentUser!!)
+
+                    // Log the successful login and the assigned role
+                    Log.d("AuthViewModel", "Login successful for: $userEmail with role: $role")
+
+                    // Immediately navigate based on the role
                     when (role) {
                         "admin" -> {
-                            navController.navigate("adminHome") {
-                                popUpTo("login") { inclusive = true }
+                            Log.d("AuthViewModel", "Navigating to adminHomePage")
+                            navController.navigate(Screen.AdminHomePage.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
                             }
                         }
                         "employee" -> {
-                            navController.navigate("homepage") {
-                                popUpTo("login") { inclusive = true }
+                            Log.d("AuthViewModel", "Navigating to homePage")
+                            navController.navigate(Screen.HomePage.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
                             }
                         }
                         else -> {
-                            Log.e("Login", "Unknown role: $role")
+                            Log.e("AuthViewModel", "Unknown role: $role")
                         }
                     }
+                } else {
+                    Log.e("AuthViewModel", "Login failed: ${task.exception?.message}")
                 }
             }
+            .addOnFailureListener { exception ->
+                Log.e("AuthViewModel", "Error during login: ${exception.message}")
+            }
     }
-     fun assignRoleBasedOnEmail(email: String?): String {
+
+
+    fun assignRoleBasedOnEmail(email: String?): String {
         return if (email == "admin10@example.com") { // Replace with the actual admin email
             "admin"
         } else {
             "employee"
         }
-    }
+
+
+
+     }
 
     fun signup(
         email: String,

@@ -1,6 +1,7 @@
 package com.example.firebaseauth.pages
 
 import AuthViewModel
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -40,27 +41,40 @@ fun LoginPage(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val authState = authViewModel.authState.observeAsState()
+    val authState by authViewModel.authState.observeAsState()
     val context = LocalContext.current
-    val authViewModel: AuthViewModel = viewModel() // In your Composable root or Navigation graph
 
 
-    LaunchedEffect(authState.value) {
-        when (val state = authState.value) {
-            is AuthState.EmployeeAuthenticated -> {
-                navController.navigate("homepage") // Navigate on successful login
-            }
-            is AuthState.AdminAuthenticated -> {
-                navController.navigate("adminHome") // Navigate on successful login
+    LaunchedEffect(authState) {
+        when (val state = authState) {
+            is AuthState.Authenticated -> {
+                // Perform navigation based on role (admin or employee)
+                val userRole = authViewModel.userRole.value
+                when (userRole) {
+                    "admin" -> {
+                        Log.d("Auth", "Admin authenticated. Navigating to AdminHome.")
+                        navController.navigate("adminHome") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                    "employee" -> {
+                        Log.d("Auth", "Employee authenticated. Navigating to HomePage.")
+                        navController.navigate("homePage") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                }
             }
             is AuthState.Error -> {
-                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show() // Show error toast
+                Log.e("Auth", "Error: ${state.message}")
+                Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
             }
             else -> {
-                // Handle unauthenticated state if necessary
+                Log.d("Auth", "Unauthenticated or other state: $state")
             }
         }
     }
+
 
     // Main layout container
     Box(

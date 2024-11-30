@@ -19,6 +19,8 @@ import com.example.firebaseauth.pages.LoginPage
 import com.example.firebaseauth.viewmodel.AuthState
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.firebaseauth.pages.Account
 import com.example.firebaseauth.pages.AccountAdmin
@@ -35,9 +37,8 @@ sealed class Screen(val route: String) {
     object Signup : Screen("signup")
     object HomePage : Screen("homePage")
     object Map : Screen("map")
-    object AdminHome : Screen("adminHome")
+    object AdminHomePage : Screen("adminHomePage")
 }
-
 
 @Composable
 fun MyAppNavigation(
@@ -46,10 +47,12 @@ fun MyAppNavigation(
     currentLocation: LatLng? = null
 ) {
     val navController = rememberNavController()
-    val dtrViewModel = DTRViewModel()
     val authState by authViewModel.authState.observeAsState(AuthState.Unauthenticated)
     val userRole by authViewModel.userRole.observeAsState()
     val context = LocalContext.current
+
+    val role = userRole ?: ""
+
 
     val locationHelper = remember {
         LocationHelper(
@@ -58,9 +61,10 @@ fun MyAppNavigation(
         )
     }
 
+    // Set the start destination based on the authentication state
     val startDestination = when (authState) {
         is AuthState.EmployeeAuthenticated -> Screen.HomePage.route
-        is AuthState.AdminAuthenticated -> Screen.AdminHome.route
+        is AuthState.AdminAuthenticated -> Screen.AdminHomePage.route
         else -> Screen.Login.route
     }
 
@@ -68,7 +72,7 @@ fun MyAppNavigation(
         bottomBar = {
             val currentRoute = navController.currentBackStackEntry?.destination?.route
             if (currentRoute in listOf("home", "map", "Dtr")) {
-
+                // Add any bottom bar content here
             }
         },
         content = { innerPadding ->
@@ -87,13 +91,23 @@ fun MyAppNavigation(
                             val userEmail = authViewModel.auth.currentUser?.email ?: ""
                             val role = authViewModel.assignRoleBasedOnEmail(userEmail)
 
-                            when (role) {
-                                "admin" -> navController.navigate(Screen.AdminHome.route) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
-                                }
 
-                                "employee" -> navController.navigate(Screen.HomePage.route) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
+                            // Log the role assignment and navigate accordingly
+                            Log.d("Login", "User role: $role")
+
+                            when (role) {
+                                "admin" -> {
+                                    navController.navigate(Screen.AdminHomePage.route) {
+                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                    }
+                                }
+                                "employee" -> {
+                                    navController.navigate(Screen.HomePage.route) {
+                                        popUpTo(Screen.Login.route) { inclusive = true }
+                                    }
+                                }
+                                else -> {
+                                    Log.e("Login", "Unknown role: $role")
                                 }
                             }
                         }
@@ -113,7 +127,7 @@ fun MyAppNavigation(
                 }
 
                 // Admin Home Page
-                composable(Screen.AdminHome.route) {
+                composable(Screen.AdminHomePage.route) {
                     AdminHomePage(
                         modifier = modifier,
                         navController = navController,
@@ -155,7 +169,6 @@ fun MyAppNavigation(
                     val fusedLocationClient =
                         LocationServices.getFusedLocationProviderClient(LocalContext.current)
 
-
                     val currentUserEmail =
                         remember { FirebaseAuth.getInstance().currentUser?.email }
 
@@ -170,15 +183,13 @@ fun MyAppNavigation(
                     }
                 }
 
+
+
                 // Map Page
                 composable(Screen.Map.route) {
                     MapPage(modifier = modifier)
                 }
             }
-
         }
     )
 }
-
-
-

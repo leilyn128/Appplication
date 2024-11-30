@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.firebaseauth.R
-import com.example.firebaseauth.helper.FirestoreHelper
+import com.example.firebaseauth.activity.FirestoreHelper
 import com.google.firebase.firestore.FirebaseFirestore
 
 

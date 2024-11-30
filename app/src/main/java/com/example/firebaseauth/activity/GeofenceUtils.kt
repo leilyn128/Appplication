@@ -1,7 +1,6 @@
-package com.example.yourapp.utils
+package com.example.firebaseauth.activity
 
 import android.content.Context
-import android.widget.Toast
 import com.google.android.gms.location.FusedLocationProviderClient
 import kotlin.math.pow
 import kotlin.math.sqrt

@@ -1,4 +1,4 @@
-package com.example.firebaseauth.helper
+package com.example.firebaseauth.activity
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
